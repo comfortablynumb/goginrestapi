@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/comfortablynumb/goginrestapi/internal/apperror"
+	"github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/rs/zerolog"
 	validator2 "gopkg.in/go-playground/validator.v9"
 )
@@ -15,10 +16,10 @@ const (
 // Interfaces
 
 type UserService interface {
-	Find(userFindResource *UserFindResource) ([]*UserResource, *apperror.AppError)
-	Create(userCreateResource *UserCreateResource) (*UserResource, *apperror.AppError)
-	Update(userUpdateResource *UserUpdateResource) (*UserResource, *apperror.AppError)
-	Delete(userDeleteResource *UserDeleteResource) (*UserResource, *apperror.AppError)
+	Find(ctx *context.RequestContext, userFindResource *UserFindResource) ([]*UserResource, *apperror.AppError)
+	Create(ctx *context.RequestContext, userCreateResource *UserCreateResource) (*UserResource, *apperror.AppError)
+	Update(ctx *context.RequestContext, userUpdateResource *UserUpdateResource) (*UserResource, *apperror.AppError)
+	Delete(ctx *context.RequestContext, userDeleteResource *UserDeleteResource) (*UserResource, *apperror.AppError)
 }
 
 // Structs
@@ -29,9 +30,9 @@ type userService struct {
 	logger         *zerolog.Logger
 }
 
-func (s *userService) Find(userFindResource *UserFindResource) ([]*UserResource, *apperror.AppError) {
+func (s *userService) Find(ctx *context.RequestContext, userFindResource *UserFindResource) ([]*UserResource, *apperror.AppError) {
 	if err := s.validator.Struct(userFindResource); err != nil {
-		return nil, apperror.NewValidationAppError(err, ServiceSourceName)
+		return nil, apperror.NewValidationAppError(ctx, err, ServiceSourceName)
 	}
 
 	filters := NewUserFindFilters().WithUsernamePtr(userFindResource.Username)
@@ -39,10 +40,10 @@ func (s *userService) Find(userFindResource *UserFindResource) ([]*UserResource,
 		WithSortByPtr(userFindResource.SortBy, userFindResource.SortDir).
 		WithLimitPtr(userFindResource.Offset, userFindResource.Limit)
 
-	rows, err := s.userRepository.Find(filters, options)
+	rows, err := s.userRepository.Find(ctx, filters, options)
 
 	if err != nil {
-		return nil, apperror.NewModelNotFoundAppError(err, ServiceSourceName)
+		return nil, apperror.NewModelNotFoundAppError(ctx, err, ServiceSourceName)
 	}
 
 	result := make([]*UserResource, 0)
@@ -54,14 +55,14 @@ func (s *userService) Find(userFindResource *UserFindResource) ([]*UserResource,
 	return result, nil
 }
 
-func (s *userService) Create(userCreateResource *UserCreateResource) (*UserResource, *apperror.AppError) {
+func (s *userService) Create(ctx *context.RequestContext, userCreateResource *UserCreateResource) (*UserResource, *apperror.AppError) {
 	if err := s.validator.Struct(userCreateResource); err != nil {
-		return nil, apperror.NewValidationAppError(err, ServiceSourceName)
+		return nil, apperror.NewValidationAppError(ctx, err, ServiceSourceName)
 	}
 
 	user := NewUser(0, userCreateResource.Username, userCreateResource.Disabled)
 
-	err := s.userRepository.Create(user)
+	err := s.userRepository.Create(ctx, user)
 
 	if err != nil {
 		return nil, err
@@ -70,25 +71,25 @@ func (s *userService) Create(userCreateResource *UserCreateResource) (*UserResou
 	return NewUserResource(user.Username, user.Disabled), nil
 }
 
-func (s *userService) Update(userUpdateResource *UserUpdateResource) (*UserResource, *apperror.AppError) {
+func (s *userService) Update(ctx *context.RequestContext, userUpdateResource *UserUpdateResource) (*UserResource, *apperror.AppError) {
 	if err := s.validator.Struct(userUpdateResource); err != nil {
-		return nil, apperror.NewValidationAppError(err, ServiceSourceName)
+		return nil, apperror.NewValidationAppError(ctx, err, ServiceSourceName)
 	}
 
-	user, err := s.userRepository.FindOneByUsername(userUpdateResource.Username)
+	user, err := s.userRepository.FindOneByUsername(ctx, userUpdateResource.Username)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if user == nil {
-		return nil, apperror.NewModelNotFoundAppError(err, ServiceSourceName)
+		return nil, apperror.NewModelNotFoundAppError(ctx, err, ServiceSourceName)
 	}
 
 	user.Username = userUpdateResource.Username
 	user.Disabled = userUpdateResource.Disabled
 
-	err = s.userRepository.Update(user)
+	err = s.userRepository.Update(ctx, user)
 
 	if err != nil {
 		return nil, err
@@ -97,12 +98,12 @@ func (s *userService) Update(userUpdateResource *UserUpdateResource) (*UserResou
 	return NewUserResource(user.Username, user.Disabled), nil
 }
 
-func (s *userService) Delete(userDeleteResource *UserDeleteResource) (*UserResource, *apperror.AppError) {
+func (s *userService) Delete(ctx *context.RequestContext, userDeleteResource *UserDeleteResource) (*UserResource, *apperror.AppError) {
 	if err := s.validator.Struct(userDeleteResource); err != nil {
-		return nil, apperror.NewValidationAppError(err, ServiceSourceName)
+		return nil, apperror.NewValidationAppError(ctx, err, ServiceSourceName)
 	}
 
-	user, err := s.userRepository.FindOneByUsername(userDeleteResource.Username)
+	user, err := s.userRepository.FindOneByUsername(ctx, userDeleteResource.Username)
 
 	if err != nil {
 		return nil, err
@@ -112,7 +113,7 @@ func (s *userService) Delete(userDeleteResource *UserDeleteResource) (*UserResou
 		return nil, nil
 	}
 
-	err = s.userRepository.Delete(user)
+	err = s.userRepository.Delete(ctx, user)
 
 	if err != nil {
 		return nil, err

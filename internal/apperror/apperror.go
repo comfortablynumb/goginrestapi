@@ -1,6 +1,12 @@
 package apperror
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/comfortablynumb/goginrestapi/internal/context"
+	"github.com/comfortablynumb/goginrestapi/internal/validation"
+	"gopkg.in/go-playground/validator.v9"
+)
 
 // Structs
 
@@ -12,19 +18,33 @@ type AppError struct {
 	Data    map[string]interface{} `json:"data"`
 }
 
-func NewValidationAppError(err error, source string) *AppError {
-	return NewAppError(err, source, ValidationErrorCode, ValidationErrorMessage, nil)
+func NewValidationAppError(ctx *context.RequestContext, err error, source string) *AppError {
+	data := make(map[string]interface{})
+	fieldErrors, ok := err.(validator.ValidationErrors)
+
+	if ok {
+		errors := make([]*validation.ValidationError, 0)
+		trans := ctx.GetTranslator()
+
+		for _, fieldError := range fieldErrors {
+			errors = append(errors, validation.NewValidationError(fieldError.Namespace(), fieldError.Tag(), fieldError.Translate(*trans)))
+		}
+
+		data["errors"] = errors
+	}
+
+	return NewAppError(ctx, err, source, ValidationErrorCode, ValidationErrorMessage, data)
 }
 
-func NewDbAppError(err error, source string) *AppError {
-	return NewAppError(err, source, DbErrorCode, err.Error(), nil)
+func NewDbAppError(ctx *context.RequestContext, err error, source string) *AppError {
+	return NewAppError(ctx, err, source, DbErrorCode, err.Error(), nil)
 }
 
-func NewModelNotFoundAppError(err error, source string) *AppError {
-	return NewAppError(err, source, ModelNotFoundErrorCode, ModelNotFoundErrorMessage, nil)
+func NewModelNotFoundAppError(ctx *context.RequestContext, err error, source string) *AppError {
+	return NewAppError(ctx, err, source, ModelNotFoundErrorCode, ModelNotFoundErrorMessage, nil)
 }
 
-func NewAppError(err error, source string, code string, message string, data map[string]interface{}) *AppError {
+func NewAppError(ctx *context.RequestContext, err error, source string, code string, message string, data map[string]interface{}) *AppError {
 	if data == nil {
 		data = make(map[string]interface{})
 	}

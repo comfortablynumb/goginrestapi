@@ -7,6 +7,7 @@ type AppConfig struct {
 	LogLevel         string `default:"DEBUG"`
 	DbUri            string `default:"file:test.db?cache=shared&mode=memory"`
 	DbMigrationsPath string `default:"file://database/migrations"`
+	DefaultLocale    string `default:"en"`
 }
 
 // Static functions

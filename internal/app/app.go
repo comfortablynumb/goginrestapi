@@ -13,11 +13,15 @@ import (
 	"time"
 
 	"github.com/comfortablynumb/goginrestapi/internal/componentregistry"
+	context2 "github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/comfortablynumb/goginrestapi/internal/errorhandler"
 	hooks2 "github.com/comfortablynumb/goginrestapi/internal/hooks"
 	"github.com/comfortablynumb/goginrestapi/internal/middleware"
 	"github.com/comfortablynumb/goginrestapi/internal/modules/user"
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/locales/en"
+	"github.com/go-playground/locales/es"
+	ut "github.com/go-playground/universal-translator"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -51,6 +55,7 @@ type app struct {
 	errorHandler      *errorhandler.ErrorHandler
 	router            *gin.Engine
 	logger            *zerolog.Logger
+	translator        *ut.UniversalTranslator
 }
 
 func (a *app) Run() error {
@@ -89,6 +94,7 @@ func (a *app) Run() error {
 
 func (a *app) setUp() {
 	a.logger = a.createLogger()
+	a.translator = a.createTranslator()
 	a.errorHandler = a.createErrorHandler()
 	a.componentRegistry = a.createComponentRegistry()
 	a.router = a.createRouter()
@@ -165,6 +171,17 @@ func (a *app) createValidator() *validator.Validate {
 	return a.hooks.SetupValidator(validator.New())
 }
 
+func (a *app) createTranslator() *ut.UniversalTranslator {
+	enLocale := en.New()
+	esLocale := es.New()
+
+	return ut.New(enLocale, esLocale)
+}
+
+func (a *app) createRequestContextFactory() *context2.RequestContextFactory {
+	return context2.NewRequestContextFactory(a.translator)
+}
+
 func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 	componentRegistry := componentregistry.NewComponentRegistry()
 
@@ -176,6 +193,14 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 
 	componentRegistry.Validator = a.createValidator()
 
+	// Translator
+
+	componentRegistry.Translator = a.translator
+
+	// Request Context Factory
+
+	componentRegistry.RequestContextFactory = a.createRequestContextFactory()
+
 	// Db
 
 	componentRegistry.Db = a.createDb()
@@ -186,7 +211,7 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 
 	componentRegistry.UserRepository = user.NewUserRepository(componentRegistry.Db, componentRegistry.Logger)
 	componentRegistry.UserService = user.NewUserService(componentRegistry.Validator, componentRegistry.UserRepository, componentRegistry.Logger)
-	componentRegistry.UserController = user.NewUserController(componentRegistry.UserService)
+	componentRegistry.UserController = user.NewUserController(componentRegistry.UserService, componentRegistry.RequestContextFactory)
 
 	return componentRegistry
 }
@@ -194,7 +219,7 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 func (a *app) createRouter() *gin.Engine {
 	router := gin.Default()
 
-	router.Use(middleware.ErrorHandler(gin.ErrorTypeAny, a.errorHandler))
+	router.Use(middleware.ErrorHandler(a.componentRegistry.RequestContextFactory, gin.ErrorTypeAny, a.errorHandler))
 
 	router = a.hooks.SetupRouter(router)
 
