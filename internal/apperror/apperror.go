@@ -4,8 +4,6 @@ import (
 	"fmt"
 
 	"github.com/comfortablynumb/goginrestapi/internal/context"
-	"github.com/comfortablynumb/goginrestapi/internal/validation"
-	"gopkg.in/go-playground/validator.v9"
 )
 
 // Structs
@@ -20,18 +18,8 @@ type AppError struct {
 
 func NewValidationAppError(ctx *context.RequestContext, err error, source string) *AppError {
 	data := make(map[string]interface{})
-	fieldErrors, ok := err.(validator.ValidationErrors)
 
-	if ok {
-		errors := make([]*validation.ValidationError, 0)
-		trans := ctx.GetTranslator()
-
-		for _, fieldError := range fieldErrors {
-			errors = append(errors, validation.NewValidationError(fieldError.Namespace(), fieldError.Tag(), fieldError.Translate(*trans)))
-		}
-
-		data["errors"] = errors
-	}
+	AddValidationErrorsToMap(ctx, err, data)
 
 	return NewAppError(ctx, err, source, ValidationErrorCode, ValidationErrorMessage, data)
 }

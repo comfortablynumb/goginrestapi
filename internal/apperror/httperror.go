@@ -5,8 +5,6 @@ import (
 	"net/http"
 
 	"github.com/comfortablynumb/goginrestapi/internal/context"
-	"github.com/comfortablynumb/goginrestapi/internal/validation"
-	"gopkg.in/go-playground/validator.v9"
 )
 
 // Structs
@@ -30,38 +28,30 @@ func (e *HttpError) String() string {
 
 // Static functions
 
-func NewBindingHttpError(ctx *context.RequestContext, err error, source string) *HttpError {
-	data := make(map[string]interface{})
-	fieldErrors, ok := err.(validator.ValidationErrors)
-
-	if ok {
-		errors := make([]*validation.ValidationError, 0)
-		trans := ctx.GetTranslator()
-
-		for _, fieldError := range fieldErrors {
-			errors = append(errors, validation.NewValidationError(fieldError.Namespace(), fieldError.Tag(), fieldError.Translate(*trans)))
-		}
-
-		data["errors"] = errors
+func NewBindingHttpError(ctx *context.RequestContext, err error, source string, data map[string]interface{}) *HttpError {
+	if data == nil {
+		data = make(map[string]interface{})
 	}
+
+	AddValidationErrorsToMap(ctx, err, data)
 
 	return NewHttpError(ctx, err, source, http.StatusBadRequest, BindingErrorCode, BindingErrorMessage, data)
 }
 
-func NewValidationHttpError(ctx *context.RequestContext, err error, source string) *HttpError {
-	return NewHttpError(ctx, err, source, http.StatusBadRequest, ValidationErrorCode, fmt.Sprintf("%s: %s", ValidationErrorMessage, err.Error()), nil)
+func NewValidationHttpError(ctx *context.RequestContext, err error, source string, data map[string]interface{}) *HttpError {
+	return NewHttpError(ctx, err, source, http.StatusBadRequest, ValidationErrorCode, ValidationErrorMessage, data)
 }
 
-func NewInternalServerHttpError(ctx *context.RequestContext, err error, source string) *HttpError {
-	return NewHttpError(ctx, err, source, http.StatusInternalServerError, InternalErrorCode, InternalErrorMessage, nil)
+func NewInternalServerHttpError(ctx *context.RequestContext, err error, source string, data map[string]interface{}) *HttpError {
+	return NewHttpError(ctx, err, source, http.StatusInternalServerError, InternalErrorCode, InternalErrorMessage, data)
 }
 
-func NewDbHttpError(ctx *context.RequestContext, err error, source string) *HttpError {
-	return NewHttpError(ctx, err, source, http.StatusInternalServerError, DbErrorCode, DbErrorMessage, nil)
+func NewDbHttpError(ctx *context.RequestContext, err error, source string, data map[string]interface{}) *HttpError {
+	return NewHttpError(ctx, err, source, http.StatusInternalServerError, DbErrorCode, DbErrorMessage, data)
 }
 
-func NewNotFoundHttpError(ctx *context.RequestContext, err error, source string) *HttpError {
-	return NewHttpError(ctx, err, source, http.StatusNotFound, ModelNotFoundErrorCode, ModelNotFoundErrorMessage, nil)
+func NewNotFoundHttpError(ctx *context.RequestContext, err error, source string, data map[string]interface{}) *HttpError {
+	return NewHttpError(ctx, err, source, http.StatusNotFound, ModelNotFoundErrorCode, ModelNotFoundErrorMessage, data)
 }
 
 func NewHttpError(ctx *context.RequestContext, err error, source string, httpStatus int, code string, message string, data map[string]interface{}) *HttpError {

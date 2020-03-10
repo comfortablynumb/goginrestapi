@@ -31,15 +31,15 @@ func (e *ErrorHandler) HandleFatalIfError(err error, message string) {
 func (e *ErrorHandler) MapAppErrorToHttpError(ctx *context.RequestContext, err *apperror.AppError) *apperror.HttpError {
 	switch err.Code {
 	case apperror.BindingErrorCode:
-		return apperror.NewBindingHttpError(ctx, err.Err, err.Source)
+		return apperror.NewBindingHttpError(ctx, err.Err, err.Source, err.Data)
 	case apperror.ValidationErrorCode:
-		return apperror.NewValidationHttpError(ctx, err.Err, err.Source)
+		return apperror.NewValidationHttpError(ctx, err.Err, err.Source, err.Data)
 	case apperror.DbErrorCode:
-		return apperror.NewDbHttpError(ctx, err.Err, err.Source)
+		return apperror.NewDbHttpError(ctx, err.Err, err.Source, err.Data)
 	case apperror.ModelNotFoundErrorCode:
-		return apperror.NewNotFoundHttpError(ctx, err.Err, err.Source)
+		return apperror.NewNotFoundHttpError(ctx, err.Err, err.Source, err.Data)
 	default:
-		return apperror.NewInternalServerHttpError(ctx, err.Err, err.Source)
+		return apperror.NewInternalServerHttpError(ctx, err.Err, err.Source, err.Data)
 	}
 }
 
@@ -56,7 +56,7 @@ func (e *ErrorHandler) CreateHttpErrorFromErr(ctx *context.RequestContext, err e
 	case *apperror.HttpError:
 		controllerError = err.(*apperror.HttpError)
 	default:
-		controllerError = apperror.NewInternalServerHttpError(ctx, err, "ErrorHandler")
+		controllerError = apperror.NewInternalServerHttpError(ctx, err, "ErrorHandler", nil)
 	}
 
 	return controllerError

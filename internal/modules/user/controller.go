@@ -26,7 +26,7 @@ func (ctrl *UserController) Find(c *gin.Context) {
 	var req UserFindResource
 
 	if err := c.ShouldBind(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
 
 		return
 	}
@@ -47,7 +47,7 @@ func (ctrl *UserController) Create(c *gin.Context) {
 	var req UserCreateResource
 
 	if err := c.ShouldBind(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
 
 		return
 	}
@@ -68,13 +68,13 @@ func (ctrl *UserController) Update(c *gin.Context) {
 	var req UserUpdateResource
 
 	if err := c.ShouldBindUri(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
 
 		return
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
 
 		return
 	}
@@ -96,7 +96,7 @@ func (ctrl *UserController) Delete(c *gin.Context) {
 	var req UserDeleteResource
 
 	if err := c.ShouldBindUri(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
 
 		return
 	}
