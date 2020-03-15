@@ -5,6 +5,7 @@ import (
 
 	"github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/comfortablynumb/goginrestapi/internal/modules/user"
+	"github.com/comfortablynumb/goginrestapi/internal/services"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/rs/zerolog"
 	"gopkg.in/go-playground/validator.v9"
@@ -18,6 +19,8 @@ type ComponentRegistry struct {
 	Logger                *zerolog.Logger
 	Translator            *ut.UniversalTranslator
 	RequestContextFactory *context.RequestContextFactory
+
+	TimeService services.TimeService
 
 	UserController *user.UserController
 	UserService    user.UserService

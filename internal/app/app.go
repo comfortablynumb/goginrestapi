@@ -18,6 +18,7 @@ import (
 	hooks2 "github.com/comfortablynumb/goginrestapi/internal/hooks"
 	"github.com/comfortablynumb/goginrestapi/internal/middleware"
 	"github.com/comfortablynumb/goginrestapi/internal/modules/user"
+	"github.com/comfortablynumb/goginrestapi/internal/services"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/locales/en"
 	"github.com/go-playground/locales/es"
@@ -182,6 +183,10 @@ func (a *app) createRequestContextFactory() *context2.RequestContextFactory {
 	return context2.NewRequestContextFactory(a.translator)
 }
 
+func (a *app) createTimeService() services.TimeService {
+	return services.NewTimeService()
+}
+
 func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 	componentRegistry := componentregistry.NewComponentRegistry()
 
@@ -201,6 +206,10 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 
 	componentRegistry.RequestContextFactory = a.createRequestContextFactory()
 
+	// Time Service
+
+	componentRegistry.TimeService = a.createTimeService()
+
 	// Db
 
 	componentRegistry.Db = a.createDb()
@@ -210,7 +219,12 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 	// User module
 
 	componentRegistry.UserRepository = user.NewUserRepository(componentRegistry.Db, componentRegistry.Logger)
-	componentRegistry.UserService = user.NewUserService(componentRegistry.Validator, componentRegistry.UserRepository, componentRegistry.Logger)
+	componentRegistry.UserService = user.NewUserService(
+		componentRegistry.Logger,
+		componentRegistry.Validator,
+		componentRegistry.TimeService,
+		componentRegistry.UserRepository,
+	)
 	componentRegistry.UserController = user.NewUserController(componentRegistry.UserService, componentRegistry.RequestContextFactory)
 
 	return componentRegistry

@@ -36,7 +36,9 @@ func (r *userRepository) Find(ctx *context.RequestContext, filters *UserFindFilt
 	query := `SELECT
 	u.id,
 	u.username,
-	u.disabled
+	u.disabled,
+	u.created_at,
+	u.updated_at
 FROM users u
 WHERE 1 = 1 `
 	bindings := make([]interface{}, 0)
@@ -63,31 +65,41 @@ WHERE 1 = 1 `
 	res := make([]*User, 0)
 
 	for rows.Next() {
-		user := NewEmptyUser()
+		userBuilder := NewUserBuilder()
 
 		ID := sql.NullInt64{}
 		username := sql.NullString{}
 		disabled := sql.NullBool{}
+		createdAt := sql.NullTime{}
+		updatedAt := sql.NullTime{}
 
-		err = rows.Scan(&ID, &username, &disabled)
+		err = rows.Scan(&ID, &username, &disabled, &createdAt, &updatedAt)
 
 		if err != nil {
 			return nil, apperror.NewDbAppError(ctx, err, RepositorySourceName)
 		}
 
 		if ID.Valid {
-			user.ID = ID.Int64
+			userBuilder.WithID(ID.Int64)
 		}
 
 		if username.Valid {
-			user.Username = username.String
+			userBuilder.WithUsername(username.String)
 		}
 
 		if disabled.Valid {
-			user.Disabled = disabled.Bool
+			userBuilder.WithDisabled(disabled.Bool)
 		}
 
-		res = append(res, user)
+		if createdAt.Valid {
+			userBuilder.WithCreatedAt(createdAt.Time)
+		}
+
+		if updatedAt.Valid {
+			userBuilder.WithUpdatedAt(updatedAt.Time)
+		}
+
+		res = append(res, userBuilder.Build())
 	}
 
 	if err := rows.Err(); err != nil {
@@ -112,9 +124,9 @@ func (r *userRepository) FindOneByUsername(ctx *context.RequestContext, username
 }
 
 func (r *userRepository) Create(ctx *context.RequestContext, user *User) *apperror.AppError {
-	query := `INSERT INTO users (username, disabled) VALUES (?, ?)`
+	query := `INSERT INTO users (username, disabled, created_at, updated_at) VALUES (?, ?, ?, ?)`
 
-	res, err := r.db.Exec(query, user.Username, user.Disabled)
+	res, err := r.db.Exec(query, user.Username, user.Disabled, user.CreatedAt, user.UpdatedAt)
 
 	if err != nil {
 		return apperror.NewDbAppError(ctx, err, RepositorySourceName)
@@ -134,10 +146,11 @@ func (r *userRepository) Create(ctx *context.RequestContext, user *User) *apperr
 func (r *userRepository) Update(ctx *context.RequestContext, user *User) *apperror.AppError {
 	query := `UPDATE users
 	SET username = ?,
-		disabled = ?
+		disabled = ?,
+		updated_at = ?
 	WHERE id = ?`
 
-	_, err := r.db.Exec(query, user.Username, user.Disabled, user.ID)
+	_, err := r.db.Exec(query, user.Username, user.Disabled, user.UpdatedAt, user.ID)
 
 	if err != nil {
 		return apperror.NewDbAppError(ctx, err, RepositorySourceName)

@@ -3,6 +3,7 @@ package user
 import (
 	"github.com/comfortablynumb/goginrestapi/internal/apperror"
 	"github.com/comfortablynumb/goginrestapi/internal/context"
+	"github.com/comfortablynumb/goginrestapi/internal/services"
 	"github.com/rs/zerolog"
 	validator2 "gopkg.in/go-playground/validator.v9"
 )
@@ -25,9 +26,10 @@ type UserService interface {
 // Structs
 
 type userService struct {
-	validator      *validator2.Validate
-	userRepository UserRepository
 	logger         *zerolog.Logger
+	validator      *validator2.Validate
+	timeService    services.TimeService
+	userRepository UserRepository
 }
 
 func (s *userService) Find(ctx *context.RequestContext, userFindResource *UserFindResource) ([]*UserResource, *apperror.AppError) {
@@ -60,7 +62,12 @@ func (s *userService) Create(ctx *context.RequestContext, userCreateResource *Us
 		return nil, apperror.NewValidationAppError(ctx, err, ServiceSourceName)
 	}
 
-	user := NewUser(0, userCreateResource.Username, userCreateResource.Disabled)
+	user := NewUserBuilder().
+		WithUsername(userCreateResource.Username).
+		WithDisabled(userCreateResource.Disabled).
+		WithCreatedAt(s.timeService.GetCurrentUtcTime()).
+		WithUpdatedAt(s.timeService.GetCurrentUtcTime()).
+		Build()
 
 	err := s.userRepository.Create(ctx, user)
 
@@ -88,6 +95,7 @@ func (s *userService) Update(ctx *context.RequestContext, userUpdateResource *Us
 
 	user.Username = userUpdateResource.Username
 	user.Disabled = userUpdateResource.Disabled
+	user.UpdatedAt = s.timeService.GetCurrentUtcTime()
 
 	err = s.userRepository.Update(ctx, user)
 
@@ -124,10 +132,16 @@ func (s *userService) Delete(ctx *context.RequestContext, userDeleteResource *Us
 
 // Static functions
 
-func NewUserService(validator *validator2.Validate, userRepository UserRepository, logger *zerolog.Logger) UserService {
+func NewUserService(
+	logger *zerolog.Logger,
+	validator *validator2.Validate,
+	timeService services.TimeService,
+	userRepository UserRepository,
+) UserService {
 	return &userService{
-		validator:      validator,
-		userRepository: userRepository,
 		logger:         logger,
+		validator:      validator,
+		timeService:    timeService,
+		userRepository: userRepository,
 	}
 }
