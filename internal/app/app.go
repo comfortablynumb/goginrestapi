@@ -99,6 +99,8 @@ func (a *app) setUp() {
 	a.errorHandler = a.createErrorHandler()
 	a.componentRegistry = a.createComponentRegistry()
 	a.router = a.createRouter()
+
+	a.executeDbMigrations(a.componentRegistry.Db)
 }
 
 func (a *app) createLogger() *zerolog.Logger {
@@ -213,8 +215,6 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 	// Db
 
 	componentRegistry.Db = a.createDb()
-
-	a.executeDbMigrations(componentRegistry.Db)
 
 	// User module
 
