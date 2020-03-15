@@ -162,7 +162,7 @@ func (r *userTypeRepository) Update(ctx *context.RequestContext, userType *model
 }
 
 func (r *userTypeRepository) Delete(ctx *context.RequestContext, userType *model.UserType) *apperror.AppError {
-	query := `DELETE FROM users
+	query := `DELETE FROM user_types
 	WHERE id = ?`
 
 	_, err := r.db.Exec(query, userType.ID)

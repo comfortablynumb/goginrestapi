@@ -249,6 +249,17 @@ func (a *app) createRouter() *gin.Engine {
 
 	router = a.hooks.SetupRouter(router)
 
+	// User Types
+
+	userTypes := router.Group("/user_type")
+
+	userTypes.GET("", a.componentRegistry.UserTypeController.Find)
+	userTypes.POST("", a.componentRegistry.UserTypeController.Create)
+	userTypes.PUT("/:name", a.componentRegistry.UserTypeController.Update)
+	userTypes.DELETE("/:name", a.componentRegistry.UserTypeController.Delete)
+
+	// Users
+
 	users := router.Group("/user")
 
 	users.GET("", a.componentRegistry.UserController.Find)
