@@ -14,11 +14,12 @@ import (
 
 	"github.com/comfortablynumb/goginrestapi/internal/componentregistry"
 	context2 "github.com/comfortablynumb/goginrestapi/internal/context"
+	"github.com/comfortablynumb/goginrestapi/internal/controller"
 	"github.com/comfortablynumb/goginrestapi/internal/errorhandler"
 	hooks2 "github.com/comfortablynumb/goginrestapi/internal/hooks"
 	"github.com/comfortablynumb/goginrestapi/internal/middleware"
-	"github.com/comfortablynumb/goginrestapi/internal/modules/user"
-	"github.com/comfortablynumb/goginrestapi/internal/services"
+	repository2 "github.com/comfortablynumb/goginrestapi/internal/repository"
+	"github.com/comfortablynumb/goginrestapi/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/locales/en"
 	"github.com/go-playground/locales/es"
@@ -185,8 +186,8 @@ func (a *app) createRequestContextFactory() *context2.RequestContextFactory {
 	return context2.NewRequestContextFactory(a.translator)
 }
 
-func (a *app) createTimeService() services.TimeService {
-	return services.NewTimeService()
+func (a *app) createTimeService() service.TimeService {
+	return service.NewTimeService()
 }
 
 func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
@@ -216,16 +217,27 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 
 	componentRegistry.Db = a.createDb()
 
+	// User Type module
+
+	componentRegistry.UserTypeRepository = repository2.NewUserTypeRepository(componentRegistry.Db, componentRegistry.Logger)
+	componentRegistry.UserTypeService = service.NewUserTypeService(
+		componentRegistry.Logger,
+		componentRegistry.Validator,
+		componentRegistry.TimeService,
+		componentRegistry.UserTypeRepository,
+	)
+	componentRegistry.UserTypeController = controller.NewUserTypeController(componentRegistry.UserTypeService, componentRegistry.RequestContextFactory)
+
 	// User module
 
-	componentRegistry.UserRepository = user.NewUserRepository(componentRegistry.Db, componentRegistry.Logger)
-	componentRegistry.UserService = user.NewUserService(
+	componentRegistry.UserRepository = repository2.NewUserRepository(componentRegistry.Db, componentRegistry.Logger)
+	componentRegistry.UserService = service.NewUserService(
 		componentRegistry.Logger,
 		componentRegistry.Validator,
 		componentRegistry.TimeService,
 		componentRegistry.UserRepository,
 	)
-	componentRegistry.UserController = user.NewUserController(componentRegistry.UserService, componentRegistry.RequestContextFactory)
+	componentRegistry.UserController = controller.NewUserController(componentRegistry.UserService, componentRegistry.RequestContextFactory)
 
 	return componentRegistry
 }

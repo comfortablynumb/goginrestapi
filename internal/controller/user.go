@@ -1,32 +1,34 @@
-package user
+package controller
 
 import (
 	"net/http"
 
 	"github.com/comfortablynumb/goginrestapi/internal/apperror"
 	"github.com/comfortablynumb/goginrestapi/internal/context"
+	"github.com/comfortablynumb/goginrestapi/internal/resource"
+	"github.com/comfortablynumb/goginrestapi/internal/service"
 	"github.com/gin-gonic/gin"
 )
 
 // Constants
 
 const (
-	ControllerSourceName = "UserController"
+	UserControllerSourceName = "UserController"
 )
 
 // Structs
 
 type UserController struct {
-	userService           UserService
+	userService           service.UserService
 	requestContextFactory *context.RequestContextFactory
 }
 
 func (ctrl *UserController) Find(c *gin.Context) {
 	requestContext := ctrl.requestContextFactory.NewRequestContext(c)
-	var req UserFindResource
+	var req resource.UserFindResource
 
 	if err := c.ShouldBind(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, UserControllerSourceName, nil))
 
 		return
 	}
@@ -44,10 +46,10 @@ func (ctrl *UserController) Find(c *gin.Context) {
 
 func (ctrl *UserController) Create(c *gin.Context) {
 	requestContext := ctrl.requestContextFactory.NewRequestContext(c)
-	var req UserCreateResource
+	var req resource.UserCreateResource
 
 	if err := c.ShouldBind(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, UserControllerSourceName, nil))
 
 		return
 	}
@@ -65,16 +67,16 @@ func (ctrl *UserController) Create(c *gin.Context) {
 
 func (ctrl *UserController) Update(c *gin.Context) {
 	requestContext := ctrl.requestContextFactory.NewRequestContext(c)
-	var req UserUpdateResource
+	var req resource.UserUpdateResource
 
 	if err := c.ShouldBindUri(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, UserControllerSourceName, nil))
 
 		return
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, UserControllerSourceName, nil))
 
 		return
 	}
@@ -93,10 +95,10 @@ func (ctrl *UserController) Update(c *gin.Context) {
 func (ctrl *UserController) Delete(c *gin.Context) {
 	requestContext := ctrl.requestContextFactory.NewRequestContext(c)
 
-	var req UserDeleteResource
+	var req resource.UserDeleteResource
 
 	if err := c.ShouldBindUri(&req); err != nil {
-		c.Error(apperror.NewBindingHttpError(requestContext, err, ControllerSourceName, nil))
+		c.Error(apperror.NewBindingHttpError(requestContext, err, UserControllerSourceName, nil))
 
 		return
 	}
@@ -114,7 +116,7 @@ func (ctrl *UserController) Delete(c *gin.Context) {
 
 // Static functions
 
-func NewUserController(userService UserService, requestContextFactory *context.RequestContextFactory) *UserController {
+func NewUserController(userService service.UserService, requestContextFactory *context.RequestContextFactory) *UserController {
 	return &UserController{
 		userService:           userService,
 		requestContextFactory: requestContextFactory,

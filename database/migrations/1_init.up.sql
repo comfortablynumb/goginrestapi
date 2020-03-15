@@ -1,7 +1,20 @@
+-- User Types
+
+CREATE TABLE user_types (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(50) NOT NULL,
+    disabled TINYINT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL
+);
+
+-- Users
+
 CREATE TABLE users (
     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     username VARCHAR(50) NOT NULL,
-    disabled TINYINT NOT NULL DEFAULT 0
-    created_at DATETIME NOT NULL
+    user_type_id INTEGER NOT NULL,
+    disabled TINYINT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL
 );

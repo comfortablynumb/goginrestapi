@@ -4,8 +4,9 @@ import (
 	"database/sql"
 
 	"github.com/comfortablynumb/goginrestapi/internal/context"
-	"github.com/comfortablynumb/goginrestapi/internal/modules/user"
-	"github.com/comfortablynumb/goginrestapi/internal/services"
+	"github.com/comfortablynumb/goginrestapi/internal/controller"
+	repository2 "github.com/comfortablynumb/goginrestapi/internal/repository"
+	"github.com/comfortablynumb/goginrestapi/internal/service"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/rs/zerolog"
 	"gopkg.in/go-playground/validator.v9"
@@ -20,11 +21,15 @@ type ComponentRegistry struct {
 	Translator            *ut.UniversalTranslator
 	RequestContextFactory *context.RequestContextFactory
 
-	TimeService services.TimeService
+	TimeService service.TimeService
 
-	UserController *user.UserController
-	UserService    user.UserService
-	UserRepository user.UserRepository
+	UserTypeController *controller.UserTypeController
+	UserTypeService    service.UserTypeService
+	UserTypeRepository repository2.UserTypeRepository
+
+	UserController *controller.UserController
+	UserService    service.UserService
+	UserRepository repository2.UserRepository
 }
 
 // Static functions
