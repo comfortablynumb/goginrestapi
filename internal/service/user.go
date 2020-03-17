@@ -29,14 +29,15 @@ type UserService interface {
 // Structs
 
 type userService struct {
-	logger         *zerolog.Logger
-	validator      *validator2.Validate
-	timeService    TimeService
-	userRepository repository2.UserRepository
+	logger          *zerolog.Logger
+	validator       *validator2.Validate
+	timeService     TimeService
+	userRepository  repository2.UserRepository
+	userTypeService UserTypeService
 }
 
 func (s *userService) Find(ctx *context.RequestContext, userFindResource *resource.UserFindResource) ([]*resource.UserResource, *apperror.AppError) {
-	if err := s.validator.Struct(userFindResource); err != nil {
+	if err := s.validator.StructCtx(ctx, userFindResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserServiceSourceName)
 	}
 
@@ -54,19 +55,22 @@ func (s *userService) Find(ctx *context.RequestContext, userFindResource *resour
 	result := make([]*resource.UserResource, 0)
 
 	for _, row := range rows {
-		result = append(result, resource.NewUserResource(row.Username, row.Disabled))
+		result = append(result, resource.FromUser(row))
 	}
 
 	return result, nil
 }
 
 func (s *userService) Create(ctx *context.RequestContext, userCreateResource *resource.UserCreateResource) (*resource.UserResource, *apperror.AppError) {
-	if err := s.validator.Struct(userCreateResource); err != nil {
+	if err := s.validator.StructCtx(ctx, userCreateResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserServiceSourceName)
 	}
 
+	userType := ctx.Get("user_type").(*model.UserType)
+
 	user := model.NewUserBuilder().
 		WithUsername(userCreateResource.Username).
+		WithUserType(*userType).
 		WithDisabled(userCreateResource.Disabled).
 		WithCreatedAt(s.timeService.GetCurrentUtcTime()).
 		WithUpdatedAt(s.timeService.GetCurrentUtcTime()).
@@ -78,11 +82,11 @@ func (s *userService) Create(ctx *context.RequestContext, userCreateResource *re
 		return nil, err
 	}
 
-	return resource.NewUserResource(user.Username, user.Disabled), nil
+	return resource.FromUser(user), nil
 }
 
 func (s *userService) Update(ctx *context.RequestContext, userUpdateResource *resource.UserUpdateResource) (*resource.UserResource, *apperror.AppError) {
-	if err := s.validator.Struct(userUpdateResource); err != nil {
+	if err := s.validator.StructCtx(ctx, userUpdateResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserServiceSourceName)
 	}
 
@@ -96,7 +100,10 @@ func (s *userService) Update(ctx *context.RequestContext, userUpdateResource *re
 		return nil, apperror.NewModelNotFoundAppError(ctx, err, UserServiceSourceName)
 	}
 
+	userType := ctx.Get("user_type").(*model.UserType)
+
 	user.Username = userUpdateResource.Username
+	user.UserType = *userType
 	user.Disabled = userUpdateResource.Disabled
 	user.UpdatedAt = s.timeService.GetCurrentUtcTime()
 
@@ -106,11 +113,11 @@ func (s *userService) Update(ctx *context.RequestContext, userUpdateResource *re
 		return nil, err
 	}
 
-	return resource.NewUserResource(user.Username, user.Disabled), nil
+	return resource.FromUser(user), nil
 }
 
 func (s *userService) Delete(ctx *context.RequestContext, userDeleteResource *resource.UserDeleteResource) (*resource.UserResource, *apperror.AppError) {
-	if err := s.validator.Struct(userDeleteResource); err != nil {
+	if err := s.validator.StructCtx(ctx, userDeleteResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserServiceSourceName)
 	}
 
@@ -130,7 +137,7 @@ func (s *userService) Delete(ctx *context.RequestContext, userDeleteResource *re
 		return nil, err
 	}
 
-	return resource.NewUserResource(user.Username, user.Disabled), nil
+	return resource.FromUser(user), nil
 }
 
 // Static functions
@@ -140,11 +147,13 @@ func NewUserService(
 	validator *validator2.Validate,
 	timeService TimeService,
 	userRepository repository2.UserRepository,
+	userTypeService UserTypeService,
 ) UserService {
 	return &userService{
-		logger:         logger,
-		validator:      validator,
-		timeService:    timeService,
-		userRepository: userRepository,
+		logger:          logger,
+		validator:       validator,
+		timeService:     timeService,
+		userRepository:  userRepository,
+		userTypeService: userTypeService,
 	}
 }

@@ -15,6 +15,7 @@ func (r *RequestContextFactory) NewRequestContext(ginContext *gin.Context) *Requ
 	return &RequestContext{
 		ginContext: ginContext,
 		translator: r.translator,
+		data:       make(map[string]interface{}),
 	}
 }
 

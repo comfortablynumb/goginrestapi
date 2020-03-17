@@ -1,6 +1,8 @@
 package service
 
 import (
+	context2 "context"
+
 	"github.com/comfortablynumb/goginrestapi/internal/apperror"
 	"github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/comfortablynumb/goginrestapi/internal/model"
@@ -24,6 +26,7 @@ type UserTypeService interface {
 	Create(ctx *context.RequestContext, userCreateResource *resource.UserTypeCreateResource) (*resource.UserTypeResource, *apperror.AppError)
 	Update(ctx *context.RequestContext, userUpdateResource *resource.UserTypeUpdateResource) (*resource.UserTypeResource, *apperror.AppError)
 	Delete(ctx *context.RequestContext, userDeleteResource *resource.UserTypeDeleteResource) (*resource.UserTypeResource, *apperror.AppError)
+	ValidateUserTypeByName(ctx context2.Context, fl validator2.FieldLevel) bool
 }
 
 // Structs
@@ -36,7 +39,7 @@ type userTypeService struct {
 }
 
 func (s *userTypeService) Find(ctx *context.RequestContext, userTypeFindResource *resource.UserTypeFindResource) ([]*resource.UserTypeResource, *apperror.AppError) {
-	if err := s.validator.Struct(userTypeFindResource); err != nil {
+	if err := s.validator.StructCtx(ctx, userTypeFindResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
@@ -61,7 +64,7 @@ func (s *userTypeService) Find(ctx *context.RequestContext, userTypeFindResource
 }
 
 func (s *userTypeService) Create(ctx *context.RequestContext, userCreateResource *resource.UserTypeCreateResource) (*resource.UserTypeResource, *apperror.AppError) {
-	if err := s.validator.Struct(userCreateResource); err != nil {
+	if err := s.validator.StructCtx(ctx, userCreateResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
@@ -82,7 +85,7 @@ func (s *userTypeService) Create(ctx *context.RequestContext, userCreateResource
 }
 
 func (s *userTypeService) Update(ctx *context.RequestContext, userUpdateResource *resource.UserTypeUpdateResource) (*resource.UserTypeResource, *apperror.AppError) {
-	if err := s.validator.Struct(userUpdateResource); err != nil {
+	if err := s.validator.StructCtx(ctx, userUpdateResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
@@ -110,7 +113,7 @@ func (s *userTypeService) Update(ctx *context.RequestContext, userUpdateResource
 }
 
 func (s *userTypeService) Delete(ctx *context.RequestContext, userDeleteResource *resource.UserTypeDeleteResource) (*resource.UserTypeResource, *apperror.AppError) {
-	if err := s.validator.Struct(userDeleteResource); err != nil {
+	if err := s.validator.StructCtx(ctx, userDeleteResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
@@ -131,6 +134,26 @@ func (s *userTypeService) Delete(ctx *context.RequestContext, userDeleteResource
 	}
 
 	return resource.NewUserTypeResource(user.Name, user.Disabled), nil
+}
+
+func (s *userTypeService) ValidateUserTypeByName(ctx context2.Context, fl validator2.FieldLevel) bool {
+	requestCtx := ctx.(*context.RequestContext)
+	userTypeName := fl.Field().String()
+	userType, err := s.userTypeRepository.FindOneByName(requestCtx, userTypeName)
+
+	if err != nil {
+		s.logger.Err(err)
+
+		return false
+	}
+
+	if userType == nil {
+		return false
+	}
+
+	requestCtx.Set("user_type", userType)
+
+	return true
 }
 
 // Static functions

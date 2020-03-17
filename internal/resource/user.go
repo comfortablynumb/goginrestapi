@@ -1,5 +1,7 @@
 package resource
 
+import "github.com/comfortablynumb/goginrestapi/internal/model"
+
 // Structs
 
 type UserFindResource struct {
@@ -11,13 +13,15 @@ type UserFindResource struct {
 }
 
 type UserCreateResource struct {
-	Username string `json:"username" binding:"required" validate:"required,min=1,max=50"`
-	Disabled bool   `json:"disabled"`
+	Username     string `json:"username" binding:"required" validate:"required,min=1,max=50"`
+	UserTypeName string `json:"user_type_name" validate:"required,user_type"`
+	Disabled     bool   `json:"disabled"`
 }
 
 type UserUpdateResource struct {
-	Username string `uri:"username" binding:"required" validate:"required,min=1,max=50"`
-	Disabled bool   `json:"disabled"`
+	Username     string `uri:"username" binding:"required" validate:"required,min=1,max=50"`
+	UserTypeName string `json:"user_type_name" validate:"required,user_type"`
+	Disabled     bool   `json:"disabled"`
 }
 
 type UserDeleteResource struct {
@@ -25,15 +29,21 @@ type UserDeleteResource struct {
 }
 
 type UserResource struct {
-	Username string `json:"username"`
-	Disabled bool   `json:"disabled"`
+	Username string           `json:"username"`
+	UserType UserTypeResource `json:"user_type"`
+	Disabled bool             `json:"disabled"`
 }
 
 // Static functions
 
-func NewUserResource(username string, disabled bool) *UserResource {
+func NewUserResource(username string, userType *UserTypeResource, disabled bool) *UserResource {
 	return &UserResource{
 		Username: username,
+		UserType: *userType,
 		Disabled: disabled,
 	}
+}
+
+func FromUser(user *model.User) *UserResource {
+	return NewUserResource(user.Username, FromUserType(&user.UserType), user.Disabled)
 }

@@ -2,10 +2,10 @@ package componentregistry
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 
 	"github.com/comfortablynumb/goginrestapi/internal/context"
-	"github.com/comfortablynumb/goginrestapi/internal/controller"
-	repository2 "github.com/comfortablynumb/goginrestapi/internal/repository"
 	"github.com/comfortablynumb/goginrestapi/internal/service"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/rs/zerolog"
@@ -23,17 +23,39 @@ type ComponentRegistry struct {
 
 	TimeService service.TimeService
 
-	UserTypeController *controller.UserTypeController
-	UserTypeService    service.UserTypeService
-	UserTypeRepository repository2.UserTypeRepository
+	Components map[string]interface{}
+}
 
-	UserController *controller.UserController
-	UserService    service.UserService
-	UserRepository repository2.UserRepository
+func (c *ComponentRegistry) Set(name string, component interface{}) *ComponentRegistry {
+	c.Components[name] = component
+
+	return c
+}
+
+func (c *ComponentRegistry) Get(name string) (interface{}, error) {
+	component, found := c.Components[name]
+
+	if !found {
+		return nil, errors.New(fmt.Sprintf("Component '%s' is not registered in the component registry.", name))
+	}
+
+	return component, nil
+}
+
+func (c *ComponentRegistry) GetOrPanic(name string) interface{} {
+	component, err := c.Get(name)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return component
 }
 
 // Static functions
 
 func NewComponentRegistry() *ComponentRegistry {
-	return &ComponentRegistry{}
+	return &ComponentRegistry{
+		Components: make(map[string]interface{}),
+	}
 }

@@ -12,6 +12,7 @@ import (
 type RequestContext struct {
 	ginContext *gin.Context
 	translator *ut.UniversalTranslator
+	data       map[string]interface{}
 }
 
 func (r *RequestContext) GetAcceptLanguage() string {
@@ -26,6 +27,22 @@ func (r *RequestContext) GetTranslator() *ut.Translator {
 	}
 
 	return &trans
+}
+
+func (r *RequestContext) Set(key string, value interface{}) *RequestContext {
+	r.data[key] = value
+
+	return r
+}
+
+func (r *RequestContext) Get(key string) interface{} {
+	val, found := r.data[key]
+
+	if !found {
+		return nil
+	}
+
+	return val
 }
 
 func (r *RequestContext) Deadline() (deadline time.Time, ok bool) {

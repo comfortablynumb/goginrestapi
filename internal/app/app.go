@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -14,11 +13,10 @@ import (
 
 	"github.com/comfortablynumb/goginrestapi/internal/componentregistry"
 	context2 "github.com/comfortablynumb/goginrestapi/internal/context"
-	"github.com/comfortablynumb/goginrestapi/internal/controller"
 	"github.com/comfortablynumb/goginrestapi/internal/errorhandler"
 	hooks2 "github.com/comfortablynumb/goginrestapi/internal/hooks"
 	"github.com/comfortablynumb/goginrestapi/internal/middleware"
-	repository2 "github.com/comfortablynumb/goginrestapi/internal/repository"
+	"github.com/comfortablynumb/goginrestapi/internal/module"
 	"github.com/comfortablynumb/goginrestapi/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/locales/en"
@@ -58,6 +56,7 @@ type app struct {
 	router            *gin.Engine
 	logger            *zerolog.Logger
 	translator        *ut.UniversalTranslator
+	moduleManager     *module.ModuleManager
 }
 
 func (a *app) Run() error {
@@ -80,7 +79,7 @@ func (a *app) Run() error {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutdown Server. Waiting 15 seconds to finish pending work...")
+	a.logger.Debug().Msg("[app] Shutdown Server. Waiting a maximum of 15 seconds to finish pending work...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
@@ -89,7 +88,7 @@ func (a *app) Run() error {
 		a.errorHandler.HandleFatal(err, "There was an error while shutting down the web server.")
 	}
 
-	log.Println("Server exiting")
+	a.logger.Debug().Msg("[app] Server exiting.")
 
 	return nil
 }
@@ -98,8 +97,11 @@ func (a *app) setUp() {
 	a.logger = a.createLogger()
 	a.translator = a.createTranslator()
 	a.errorHandler = a.createErrorHandler()
+	a.moduleManager = a.createModuleManager()
 	a.componentRegistry = a.createComponentRegistry()
 	a.router = a.createRouter()
+
+	a.setUpValidator(a.componentRegistry.Validator)
 
 	a.executeDbMigrations(a.componentRegistry.Db)
 }
@@ -126,13 +128,13 @@ func (a *app) createLogger() *zerolog.Logger {
 }
 
 func (a *app) createDb() *sql.DB {
-	a.logger.Debug().Msgf("Creating DB instance for driver: %s", DbDriverName)
+	a.logger.Debug().Msgf("[app] Creating DB instance for driver: %s", DbDriverName)
 
 	db, err := sql.Open(DbDriverName, a.config.DbUri)
 
 	a.errorHandler.HandleFatalIfError(err, "Could NOT create a DB instance.")
 
-	a.logger.Debug().Msg("Executing ping on the database.")
+	a.logger.Debug().Msg("[app] Executing ping on the database.")
 
 	err = db.Ping()
 
@@ -141,14 +143,31 @@ func (a *app) createDb() *sql.DB {
 	return db
 }
 
+func (a *app) createModuleManager() *module.ModuleManager {
+	moduleManager := module.NewModuleManager()
+
+	moduleManager.AddModule(&module.UserTypeModule{})
+	moduleManager.AddModule(&module.UserModule{})
+
+	return moduleManager
+}
+
+func (a *app) setUpValidator(validator *validator.Validate) {
+	for _, m := range a.moduleManager.GetModules() {
+		a.logger.Debug().Msgf("[app] Setting up validator for module '%s'...", m.GetName())
+
+		m.SetUpValidator(a.errorHandler, a.componentRegistry, a.componentRegistry.Validator)
+	}
+}
+
 func (a *app) executeDbMigrations(db *sql.DB) {
-	a.logger.Debug().Msg("Creating database migrations driver.")
+	a.logger.Debug().Msg("[app] Creating database migrations driver.")
 
 	driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 
 	a.errorHandler.HandleFatalIfError(err, "Could NOT create database migrations driver.")
 
-	a.logger.Debug().Msg("Creating database migrations instance.")
+	a.logger.Debug().Msg("[app] Creating database migrations instance.")
 
 	databaseMigrations, err := migrate.NewWithDatabaseInstance(
 		a.config.DbMigrationsPath,
@@ -158,13 +177,13 @@ func (a *app) executeDbMigrations(db *sql.DB) {
 
 	a.errorHandler.HandleFatalIfError(err, "Could NOT create database migrations instance.")
 
-	a.logger.Debug().Msg("Executing database migrations.")
+	a.logger.Debug().Msg("[app] Executing database migrations.")
 
 	err = databaseMigrations.Up()
 
 	a.errorHandler.HandleFatalIfError(err, "There was an error while trying to execute the database migrations.")
 
-	a.logger.Debug().Msg("Database migrations executed SUCCESSFULLY!")
+	a.logger.Debug().Msg("[app] Database migrations executed SUCCESSFULLY!")
 }
 
 func (a *app) createErrorHandler() *errorhandler.ErrorHandler {
@@ -217,27 +236,13 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 
 	componentRegistry.Db = a.createDb()
 
-	// User Type module
+	// Register modules components
 
-	componentRegistry.UserTypeRepository = repository2.NewUserTypeRepository(componentRegistry.Db, componentRegistry.Logger)
-	componentRegistry.UserTypeService = service.NewUserTypeService(
-		componentRegistry.Logger,
-		componentRegistry.Validator,
-		componentRegistry.TimeService,
-		componentRegistry.UserTypeRepository,
-	)
-	componentRegistry.UserTypeController = controller.NewUserTypeController(componentRegistry.UserTypeService, componentRegistry.RequestContextFactory)
+	for _, m := range a.moduleManager.GetModules() {
+		a.logger.Debug().Msgf("[app] Registering module '%s' components...", m.GetName())
 
-	// User module
-
-	componentRegistry.UserRepository = repository2.NewUserRepository(componentRegistry.Db, componentRegistry.Logger)
-	componentRegistry.UserService = service.NewUserService(
-		componentRegistry.Logger,
-		componentRegistry.Validator,
-		componentRegistry.TimeService,
-		componentRegistry.UserRepository,
-	)
-	componentRegistry.UserController = controller.NewUserController(componentRegistry.UserService, componentRegistry.RequestContextFactory)
+		m.SetUpComponents(a.errorHandler, componentRegistry)
+	}
 
 	return componentRegistry
 }
@@ -249,23 +254,13 @@ func (a *app) createRouter() *gin.Engine {
 
 	router = a.hooks.SetupRouter(router)
 
-	// User Types
+	// Setup modules routes
 
-	userTypes := router.Group("/user_type")
+	for _, m := range a.moduleManager.GetModules() {
+		a.logger.Debug().Msgf("[app] Registering module '%s' routes...", m.GetName())
 
-	userTypes.GET("", a.componentRegistry.UserTypeController.Find)
-	userTypes.POST("", a.componentRegistry.UserTypeController.Create)
-	userTypes.PUT("/:name", a.componentRegistry.UserTypeController.Update)
-	userTypes.DELETE("/:name", a.componentRegistry.UserTypeController.Delete)
-
-	// Users
-
-	users := router.Group("/user")
-
-	users.GET("", a.componentRegistry.UserController.Find)
-	users.POST("", a.componentRegistry.UserController.Create)
-	users.PUT("/:username", a.componentRegistry.UserController.Update)
-	users.DELETE("/:username", a.componentRegistry.UserController.Delete)
+		m.SetUpRouter(a.errorHandler, a.componentRegistry, router)
+	}
 
 	return router
 }

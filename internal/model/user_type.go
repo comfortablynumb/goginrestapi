@@ -2,6 +2,12 @@ package model
 
 import "time"
 
+// Interfaces
+
+type EntityWithUserType interface {
+	SetUserType(userType UserType)
+}
+
 // Structs
 
 type UserType struct {

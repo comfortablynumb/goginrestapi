@@ -40,8 +40,14 @@ func (r *userRepository) Find(ctx *context.RequestContext, filters *utils.UserFi
 	u.username,
 	u.disabled,
 	u.created_at,
-	u.updated_at
+	u.updated_at,
+	ut.id AS user_type_id,
+	ut.name AS user_type_name,
+	ut.disabled AS user_type_disabled,
+	ut.created_at AS user_type_created_at,
+	ut.updated_at AS user_type_updated_at
 FROM users u
+INNER JOIN user_types ut ON ut.id = u.user_type_id
 WHERE 1 = 1 `
 	bindings := make([]interface{}, 0)
 
@@ -68,14 +74,20 @@ WHERE 1 = 1 `
 
 	for rows.Next() {
 		userBuilder := model.NewUserBuilder()
+		userTypeBuilder := model.NewUserTypeBuilder()
 
 		ID := sql.NullInt64{}
 		username := sql.NullString{}
 		disabled := sql.NullBool{}
 		createdAt := sql.NullTime{}
 		updatedAt := sql.NullTime{}
+		userTypeID := sql.NullInt64{}
+		userTypeName := sql.NullString{}
+		userTypeDisabled := sql.NullBool{}
+		userTypeCreatedAt := sql.NullTime{}
+		userTypeUpdatedAt := sql.NullTime{}
 
-		err = rows.Scan(&ID, &username, &disabled, &createdAt, &updatedAt)
+		err = rows.Scan(&ID, &username, &disabled, &createdAt, &updatedAt, &userTypeID, &userTypeName, &userTypeDisabled, &userTypeCreatedAt, &userTypeUpdatedAt)
 
 		if err != nil {
 			return nil, apperror.NewDbAppError(ctx, err, UserRepositorySourceName)
@@ -100,6 +112,28 @@ WHERE 1 = 1 `
 		if updatedAt.Valid {
 			userBuilder.WithUpdatedAt(updatedAt.Time)
 		}
+
+		if userTypeID.Valid {
+			userTypeBuilder.WithID(userTypeID.Int64)
+		}
+
+		if userTypeName.Valid {
+			userTypeBuilder.WithName(userTypeName.String)
+		}
+
+		if userTypeDisabled.Valid {
+			userTypeBuilder.WithDisabled(userTypeDisabled.Bool)
+		}
+
+		if userTypeCreatedAt.Valid {
+			userTypeBuilder.WithCreatedAt(userTypeCreatedAt.Time)
+		}
+
+		if userTypeUpdatedAt.Valid {
+			userTypeBuilder.WithUpdatedAt(userTypeUpdatedAt.Time)
+		}
+
+		userBuilder.WithUserType(*userTypeBuilder.Build())
 
 		res = append(res, userBuilder.Build())
 	}
@@ -126,9 +160,9 @@ func (r *userRepository) FindOneByUsername(ctx *context.RequestContext, username
 }
 
 func (r *userRepository) Create(ctx *context.RequestContext, user *model.User) *apperror.AppError {
-	query := `INSERT INTO users (username, disabled, created_at, updated_at) VALUES (?, ?, ?, ?)`
+	query := `INSERT INTO users (username, user_type_id, disabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`
 
-	res, err := r.db.Exec(query, user.Username, user.Disabled, user.CreatedAt, user.UpdatedAt)
+	res, err := r.db.Exec(query, user.Username, user.UserType.ID, user.Disabled, user.CreatedAt, user.UpdatedAt)
 
 	if err != nil {
 		return apperror.NewDbAppError(ctx, err, UserRepositorySourceName)
@@ -148,11 +182,12 @@ func (r *userRepository) Create(ctx *context.RequestContext, user *model.User) *
 func (r *userRepository) Update(ctx *context.RequestContext, user *model.User) *apperror.AppError {
 	query := `UPDATE users
 	SET username = ?,
+		user_type_id = ?,
 		disabled = ?,
 		updated_at = ?
 	WHERE id = ?`
 
-	_, err := r.db.Exec(query, user.Username, user.Disabled, user.UpdatedAt, user.ID)
+	_, err := r.db.Exec(query, user.Username, user.UserType.ID, user.Disabled, user.UpdatedAt, user.ID)
 
 	if err != nil {
 		return apperror.NewDbAppError(ctx, err, UserRepositorySourceName)

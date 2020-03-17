@@ -1,5 +1,7 @@
 package resource
 
+import "github.com/comfortablynumb/goginrestapi/internal/model"
+
 // Structs
 
 type UserTypeFindResource struct {
@@ -36,4 +38,8 @@ func NewUserTypeResource(name string, disabled bool) *UserTypeResource {
 		Name:     name,
 		Disabled: disabled,
 	}
+}
+
+func FromUserType(userType *model.UserType) *UserTypeResource {
+	return NewUserTypeResource(userType.Name, userType.Disabled)
 }
