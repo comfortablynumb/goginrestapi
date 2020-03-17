@@ -55,7 +55,7 @@ func (s *userService) Find(ctx *context.RequestContext, userFindResource *resour
 	result := make([]*resource.UserResource, 0)
 
 	for _, row := range rows {
-		result = append(result, resource.FromUser(row))
+		result = append(result, resource.FromUser(*row))
 	}
 
 	return result, nil
@@ -82,7 +82,7 @@ func (s *userService) Create(ctx *context.RequestContext, userCreateResource *re
 		return nil, err
 	}
 
-	return resource.FromUser(user), nil
+	return resource.FromUser(*user), nil
 }
 
 func (s *userService) Update(ctx *context.RequestContext, userUpdateResource *resource.UserUpdateResource) (*resource.UserResource, *apperror.AppError) {
@@ -113,7 +113,7 @@ func (s *userService) Update(ctx *context.RequestContext, userUpdateResource *re
 		return nil, err
 	}
 
-	return resource.FromUser(user), nil
+	return resource.FromUser(*user), nil
 }
 
 func (s *userService) Delete(ctx *context.RequestContext, userDeleteResource *resource.UserDeleteResource) (*resource.UserResource, *apperror.AppError) {
@@ -137,7 +137,7 @@ func (s *userService) Delete(ctx *context.RequestContext, userDeleteResource *re
 		return nil, err
 	}
 
-	return resource.FromUser(user), nil
+	return resource.FromUser(*user), nil
 }
 
 // Static functions

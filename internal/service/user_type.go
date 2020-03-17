@@ -57,7 +57,7 @@ func (s *userTypeService) Find(ctx *context.RequestContext, userTypeFindResource
 	result := make([]*resource.UserTypeResource, 0)
 
 	for _, row := range rows {
-		result = append(result, resource.NewUserTypeResource(row.Name, row.Disabled))
+		result = append(result, resource.FromUserType(*row))
 	}
 
 	return result, nil
@@ -68,20 +68,20 @@ func (s *userTypeService) Create(ctx *context.RequestContext, userCreateResource
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
-	user := model.NewUserTypeBuilder().
+	userType := model.NewUserTypeBuilder().
 		WithName(userCreateResource.Name).
 		WithDisabled(userCreateResource.Disabled).
 		WithCreatedAt(s.timeService.GetCurrentUtcTime()).
 		WithUpdatedAt(s.timeService.GetCurrentUtcTime()).
 		Build()
 
-	err := s.userTypeRepository.Create(ctx, user)
+	err := s.userTypeRepository.Create(ctx, userType)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return resource.NewUserTypeResource(user.Name, user.Disabled), nil
+	return resource.FromUserType(*userType), nil
 }
 
 func (s *userTypeService) Update(ctx *context.RequestContext, userUpdateResource *resource.UserTypeUpdateResource) (*resource.UserTypeResource, *apperror.AppError) {
@@ -89,27 +89,27 @@ func (s *userTypeService) Update(ctx *context.RequestContext, userUpdateResource
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
-	user, err := s.userTypeRepository.FindOneByName(ctx, userUpdateResource.Name)
+	userType, err := s.userTypeRepository.FindOneByName(ctx, userUpdateResource.Name)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if user == nil {
+	if userType == nil {
 		return nil, apperror.NewModelNotFoundAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
-	user.Name = userUpdateResource.Name
-	user.Disabled = userUpdateResource.Disabled
-	user.UpdatedAt = s.timeService.GetCurrentUtcTime()
+	userType.Name = userUpdateResource.Name
+	userType.Disabled = userUpdateResource.Disabled
+	userType.UpdatedAt = s.timeService.GetCurrentUtcTime()
 
-	err = s.userTypeRepository.Update(ctx, user)
+	err = s.userTypeRepository.Update(ctx, userType)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return resource.NewUserTypeResource(user.Name, user.Disabled), nil
+	return resource.FromUserType(*userType), nil
 }
 
 func (s *userTypeService) Delete(ctx *context.RequestContext, userDeleteResource *resource.UserTypeDeleteResource) (*resource.UserTypeResource, *apperror.AppError) {
@@ -117,23 +117,23 @@ func (s *userTypeService) Delete(ctx *context.RequestContext, userDeleteResource
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
-	user, err := s.userTypeRepository.FindOneByName(ctx, userDeleteResource.Name)
+	userType, err := s.userTypeRepository.FindOneByName(ctx, userDeleteResource.Name)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if user == nil {
+	if userType == nil {
 		return nil, nil
 	}
 
-	err = s.userTypeRepository.Delete(ctx, user)
+	err = s.userTypeRepository.Delete(ctx, userType)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return resource.NewUserTypeResource(user.Name, user.Disabled), nil
+	return resource.FromUserType(*userType), nil
 }
 
 func (s *userTypeService) ValidateUserTypeByName(ctx context2.Context, fl validator2.FieldLevel) bool {
