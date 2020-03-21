@@ -23,6 +23,20 @@ type UserTypeController struct {
 	requestContextFactory *context.RequestContextFactory
 }
 
+// Find Search for user types.
+// @Summary Search for user types.
+// @Description Allows you to search for user types using different filters and options.
+// @Produce json
+// @Param name query string false "User Type Name"
+// @Param sort_by query string false "Field to sort by. Allowed fields: name"
+// @Param sort_dir query string false "Direction to sort by. Allowed values: asc, desc. Default: asc"
+// @Param offset query int false "Starts results from this offset. Default: 0"
+// @Param limit query int false "Limits the amount of results to return. Default: 50"
+// @Success 200 {object} resource.UserTypeResource
+// @Failure 400 {object} apperror.HttpError
+// @Failure 500 {object} apperror.HttpError
+// @Tags user types
+// @Router /user_type [get]
 func (ctrl *UserTypeController) Find(c *gin.Context) {
 	requestContext := ctrl.requestContextFactory.NewRequestContext(c)
 	var req resource.UserTypeFindResource
@@ -44,6 +58,17 @@ func (ctrl *UserTypeController) Find(c *gin.Context) {
 	c.JSON(http.StatusOK, userResources)
 }
 
+// Create Create a new user type.
+// @Summary Create a new user type.
+// @Description Allows you to create a new user type.
+// @Accept json
+// @Produce json
+// @Param user body resource.UserTypeCreateResource true "User Type data"
+// @Success 201 {object} resource.UserTypeResource
+// @Failure 400 {object} apperror.HttpError
+// @Failure 500 {object} apperror.HttpError
+// @Tags user types
+// @Router /user_type [post]
 func (ctrl *UserTypeController) Create(c *gin.Context) {
 	requestContext := ctrl.requestContextFactory.NewRequestContext(c)
 	var req resource.UserTypeCreateResource
@@ -65,6 +90,19 @@ func (ctrl *UserTypeController) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, userResource)
 }
 
+// Update Update a user type.
+// @Summary Update a user type.
+// @Description Allows you to update an existing user type.
+// @Accept json
+// @Produce json
+// @Param name path string true "Name"
+// @Param user body resource.UserTypeUpdateResource true "User Type data"
+// @Success 200 {object} resource.UserTypeResource
+// @Failure 400 {object} apperror.HttpError
+// @Failure 404 {object} apperror.HttpError
+// @Failure 500 {object} apperror.HttpError
+// @Tags user types
+// @Router /user_type/{name} [put]
 func (ctrl *UserTypeController) Update(c *gin.Context) {
 	requestContext := ctrl.requestContextFactory.NewRequestContext(c)
 	var req resource.UserTypeUpdateResource
@@ -92,6 +130,18 @@ func (ctrl *UserTypeController) Update(c *gin.Context) {
 	c.JSON(http.StatusOK, userResource)
 }
 
+// Delete Delete a user type.
+// @Summary Delete a user type.
+// @Description Allows you to delete an existing user type.
+// @Accept json
+// @Produce json
+// @Param name path string true "Name"
+// @Success 200 {object} resource.UserTypeResource
+// @Failure 400 {object} apperror.HttpError
+// @Failure 404 {object} apperror.HttpError
+// @Failure 500 {object} apperror.HttpError
+// @Tags user types
+// @Router /user_type/{name} [delete]
 func (ctrl *UserTypeController) Delete(c *gin.Context) {
 	requestContext := ctrl.requestContextFactory.NewRequestContext(c)
 

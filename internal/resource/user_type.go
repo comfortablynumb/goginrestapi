@@ -9,11 +9,9 @@ import (
 // Structs
 
 type UserTypeFindResource struct {
-	Name    *string `form:"name" validate:"omitempty,min=1,max=50"`
-	SortBy  *string `form:"sort_by"`
-	SortDir *string `form:"sort_dir"`
-	Offset  *int    `form:"offset"`
-	Limit   *int    `form:"limit"`
+	CommonFindResource
+
+	Name *string `form:"name" validate:"omitempty,min=1,max=50"`
 }
 
 type UserTypeCreateResource struct {
@@ -22,12 +20,12 @@ type UserTypeCreateResource struct {
 }
 
 type UserTypeUpdateResource struct {
-	Name     string `uri:"name" binding:"required" validate:"required,min=1,max=50"`
+	Name     string `uri:"name" json:"-" binding:"required" validate:"required,min=1,max=50"`
 	Disabled bool   `json:"disabled"`
 }
 
 type UserTypeDeleteResource struct {
-	Name string `uri:"name" binding:"required" validate:"required,min=1,max=50"`
+	Name string `uri:"name" json:"-" binding:"required" validate:"required,min=1,max=50"`
 }
 
 type UserTypeResource struct {

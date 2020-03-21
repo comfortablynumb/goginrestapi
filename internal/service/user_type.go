@@ -4,6 +4,7 @@ import (
 	context2 "context"
 
 	"github.com/comfortablynumb/goginrestapi/internal/apperror"
+	"github.com/comfortablynumb/goginrestapi/internal/config"
 	"github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/comfortablynumb/goginrestapi/internal/model"
 	"github.com/comfortablynumb/goginrestapi/internal/repository"
@@ -32,6 +33,7 @@ type UserTypeService interface {
 // Structs
 
 type userTypeService struct {
+	appConfig          config.AppConfig
 	logger             *zerolog.Logger
 	validator          *validator2.Validate
 	timeService        TimeService
@@ -43,10 +45,11 @@ func (s *userTypeService) Find(ctx *context.RequestContext, userTypeFindResource
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
-	filters := utils.NewUserTypeFindFilters().WithNamePtr(userTypeFindResource.Name)
-	options := utils.NewUserTypeFindOptions().
-		WithSortByPtr(userTypeFindResource.SortBy, userTypeFindResource.SortDir).
-		WithLimitPtr(userTypeFindResource.Offset, userTypeFindResource.Limit)
+	filters := utils.NewUserTypeFindFiltersBuilder().WithName(userTypeFindResource.Name).Build()
+	options := utils.NewUserTypeFindOptionsBuilder(s.appConfig.DefaultLimit).
+		WithSortBy(userTypeFindResource.SortBy, userTypeFindResource.SortDir).
+		WithLimit(userTypeFindResource.Offset, userTypeFindResource.Limit).
+		Build()
 
 	rows, err := s.userTypeRepository.Find(ctx, filters, options)
 
@@ -159,12 +162,14 @@ func (s *userTypeService) ValidateUserTypeByName(ctx context2.Context, fl valida
 // Static functions
 
 func NewUserTypeService(
+	appConfig config.AppConfig,
 	logger *zerolog.Logger,
 	validator *validator2.Validate,
 	timeService TimeService,
 	userTypeRepository repository.UserTypeRepository,
 ) UserTypeService {
 	return &userTypeService{
+		appConfig:          appConfig,
 		logger:             logger,
 		validator:          validator,
 		timeService:        timeService,

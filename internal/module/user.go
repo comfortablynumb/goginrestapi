@@ -2,6 +2,7 @@ package module
 
 import (
 	"github.com/comfortablynumb/goginrestapi/internal/componentregistry"
+	"github.com/comfortablynumb/goginrestapi/internal/config"
 	"github.com/comfortablynumb/goginrestapi/internal/controller"
 	"github.com/comfortablynumb/goginrestapi/internal/errorhandler"
 	repository2 "github.com/comfortablynumb/goginrestapi/internal/repository"
@@ -28,11 +29,16 @@ func (m *UserModule) GetName() string {
 	return UserModuleName
 }
 
-func (m *UserModule) SetUpComponents(errorHandler *errorhandler.ErrorHandler, componentRegistry *componentregistry.ComponentRegistry) {
+func (m *UserModule) SetUpComponents(
+	appConfig config.AppConfig,
+	errorHandler *errorhandler.ErrorHandler,
+	componentRegistry *componentregistry.ComponentRegistry,
+) {
 	userTypeService := componentRegistry.GetOrPanic(UserTypeServiceComponentName).(service.UserTypeService)
 
-	repo := repository2.NewUserRepository(componentRegistry.Db, componentRegistry.Logger)
+	repo := repository2.NewUserRepository(appConfig, componentRegistry.Db, componentRegistry.Logger)
 	serv := service.NewUserService(
+		appConfig,
 		componentRegistry.Logger,
 		componentRegistry.Validator,
 		componentRegistry.TimeService,

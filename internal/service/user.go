@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/comfortablynumb/goginrestapi/internal/apperror"
+	"github.com/comfortablynumb/goginrestapi/internal/config"
 	"github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/comfortablynumb/goginrestapi/internal/model"
 	repository2 "github.com/comfortablynumb/goginrestapi/internal/repository"
@@ -29,6 +30,7 @@ type UserService interface {
 // Structs
 
 type userService struct {
+	appConfig       config.AppConfig
 	logger          *zerolog.Logger
 	validator       *validator2.Validate
 	timeService     TimeService
@@ -41,10 +43,11 @@ func (s *userService) Find(ctx *context.RequestContext, userFindResource *resour
 		return nil, apperror.NewValidationAppError(ctx, err, UserServiceSourceName)
 	}
 
-	filters := utils.NewUserFindFilters().WithUsernamePtr(userFindResource.Username)
-	options := utils.NewUserFindOptions().
-		WithSortByPtr(userFindResource.SortBy, userFindResource.SortDir).
-		WithLimitPtr(userFindResource.Offset, userFindResource.Limit)
+	filters := utils.NewUserFindFiltersBuilder().WithUsername(userFindResource.Username).Build()
+	options := utils.NewUserFindOptionsBuilder(s.appConfig.DefaultLimit).
+		WithSortBy(userFindResource.SortBy, userFindResource.SortDir).
+		WithLimit(userFindResource.Offset, userFindResource.Limit).
+		Build()
 
 	rows, err := s.userRepository.Find(ctx, filters, options)
 
@@ -143,6 +146,7 @@ func (s *userService) Delete(ctx *context.RequestContext, userDeleteResource *re
 // Static functions
 
 func NewUserService(
+	appConfig config.AppConfig,
 	logger *zerolog.Logger,
 	validator *validator2.Validate,
 	timeService TimeService,
@@ -150,6 +154,7 @@ func NewUserService(
 	userTypeService UserTypeService,
 ) UserService {
 	return &userService{
+		appConfig:       appConfig,
 		logger:          logger,
 		validator:       validator,
 		timeService:     timeService,

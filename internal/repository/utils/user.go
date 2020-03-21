@@ -2,20 +2,10 @@ package utils
 
 // Structs
 
-// Filters
+// UserFindFilters
 
 type UserFindFilters struct {
 	username *string
-}
-
-func (u *UserFindFilters) WithUsernamePtr(username *string) *UserFindFilters {
-	u.username = username
-
-	return u
-}
-
-func (u *UserFindFilters) WithUsername(username string) *UserFindFilters {
-	return u.WithUsernamePtr(&username)
 }
 
 func (u *UserFindFilters) GetUsername() *string {
@@ -26,75 +16,97 @@ func (u *UserFindFilters) GetUsernameValue() string {
 	return *u.username
 }
 
+// UserFindFiltersBuilder
+
+type UserFindFiltersBuilder struct {
+	username *string
+}
+
+func (u *UserFindFiltersBuilder) WithUsername(username *string) *UserFindFiltersBuilder {
+	u.username = username
+
+	return u
+}
+
+func (u *UserFindFiltersBuilder) WithUsernameValue(username string) *UserFindFiltersBuilder {
+	return u.WithUsername(&username)
+}
+
+func (u *UserFindFiltersBuilder) GetUsername() *string {
+	return u.username
+}
+
+func (u *UserFindFiltersBuilder) GetUsernameValue() string {
+	return *u.username
+}
+
+func (u *UserFindFiltersBuilder) Build() *UserFindFilters {
+	return &UserFindFilters{
+		username: u.username,
+	}
+}
+
 // Options
 
+// UserFindOptions
+
 type UserFindOptions struct {
+	FindOptions
+}
+
+// UserFindOptionsBuilder
+
+type UserFindOptionsBuilder struct {
 	sortBy  *string
 	sortDir *string
 	offset  *int
 	limit   *int
 }
 
-func (u *UserFindOptions) WithSortBy(field string, dir string) *UserFindOptions {
-	return u.WithSortByPtr(&field, &dir)
+func (u *UserFindOptionsBuilder) WithSortByValue(field string, dir string) *UserFindOptionsBuilder {
+	return u.WithSortBy(&field, &dir)
 }
 
-func (u *UserFindOptions) WithSortByPtr(field *string, dir *string) *UserFindOptions {
+func (u *UserFindOptionsBuilder) WithSortBy(field *string, dir *string) *UserFindOptionsBuilder {
 	u.sortBy = field
 	u.sortDir = dir
 
 	return u
 }
 
-func (u *UserFindOptions) WithLimit(offset int, limit int) *UserFindOptions {
-	return u.WithLimitPtr(&offset, &limit)
+func (u *UserFindOptionsBuilder) WithLimitValue(offset int, limit int) *UserFindOptionsBuilder {
+	return u.WithLimit(&offset, &limit)
 }
 
-func (u *UserFindOptions) WithLimitPtr(offset *int, limit *int) *UserFindOptions {
+func (u *UserFindOptionsBuilder) WithLimit(offset *int, limit *int) *UserFindOptionsBuilder {
 	u.offset = offset
 	u.limit = limit
 
 	return u
 }
 
-func (u *UserFindOptions) GetSortBy() *string {
-	return u.sortBy
-}
-
-func (u *UserFindOptions) GetSortByValue() string {
-	return *u.sortBy
-}
-
-func (u *UserFindOptions) GetSortDir() *string {
-	return u.sortDir
-}
-
-func (u *UserFindOptions) GetSortDirValue() string {
-	return *u.sortDir
-}
-
-func (u *UserFindOptions) GetOffset() *int {
-	return u.offset
-}
-
-func (u *UserFindOptions) GetOffsetValue() int {
-	return *u.offset
-}
-
-func (u *UserFindOptions) GetLimit() *int {
-	return u.limit
-}
-
-func (u *UserFindOptions) GetLimitValue() int {
-	return *u.limit
+func (b *UserFindOptionsBuilder) Build() *UserFindOptions {
+	return &UserFindOptions{
+		FindOptions{
+			SortBy:  b.sortBy,
+			SortDir: b.sortDir,
+			Offset:  b.offset,
+			Limit:   b.limit,
+		},
+	}
 }
 
 // Static functions
 
-func NewUserFindFilters() *UserFindFilters {
-	return &UserFindFilters{}
+func NewUserFindFiltersBuilder() *UserFindFiltersBuilder {
+	return &UserFindFiltersBuilder{}
 }
 
-func NewUserFindOptions() *UserFindOptions {
-	return &UserFindOptions{}
+func NewUserFindOptionsBuilder(defaultLimit int) *UserFindOptionsBuilder {
+	offset := 0
+
+	return &UserFindOptionsBuilder{
+		offset: &offset,
+		limit:  &defaultLimit,
+	}
 }

@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/comfortablynumb/goginrestapi/docs"
 	"github.com/comfortablynumb/goginrestapi/internal/componentregistry"
 	context2 "github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/comfortablynumb/goginrestapi/internal/errorhandler"
@@ -27,6 +28,9 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/rs/zerolog"
+	_ "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/swaggo/gin-swagger/swaggerFiles"
 	"gopkg.in/go-playground/validator.v9"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -241,7 +245,7 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 	for _, m := range a.moduleManager.GetModules() {
 		a.logger.Debug().Msgf("[app] Registering module '%s' components...", m.GetName())
 
-		m.SetUpComponents(a.errorHandler, componentRegistry)
+		m.SetUpComponents(*a.config, a.errorHandler, componentRegistry)
 	}
 
 	return componentRegistry
@@ -251,6 +255,10 @@ func (a *app) createRouter() *gin.Engine {
 	router := gin.Default()
 
 	router.Use(middleware.ErrorHandler(a.componentRegistry.RequestContextFactory, gin.ErrorTypeAny, a.errorHandler))
+
+	// Swagger
+
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	router = a.hooks.SetupRouter(router)
 

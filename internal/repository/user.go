@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/comfortablynumb/goginrestapi/internal/apperror"
+	"github.com/comfortablynumb/goginrestapi/internal/config"
 	"github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/comfortablynumb/goginrestapi/internal/model"
 	"github.com/comfortablynumb/goginrestapi/internal/repository/utils"
@@ -30,8 +31,9 @@ type UserRepository interface {
 // Structs
 
 type userRepository struct {
-	db     *sql.DB
-	logger *zerolog.Logger
+	appConfig config.AppConfig
+	db        *sql.DB
+	logger    *zerolog.Logger
 }
 
 func (r *userRepository) Find(ctx *context.RequestContext, filters *utils.UserFindFilters, options *utils.UserFindOptions) ([]*model.User, *apperror.AppError) {
@@ -56,12 +58,12 @@ WHERE 1 = 1 `
 		bindings = append(bindings, filters.GetUsernameValue())
 	}
 
-	if options.GetSortBy() != nil && options.GetSortDir() != nil {
-		query += fmt.Sprintf("ORDER BY %s %s", options.GetSortByValue(), options.GetSortDirValue())
+	if options.SortBy != nil && options.SortDir != nil {
+		query += fmt.Sprintf("ORDER BY %s %s", *options.SortBy, *options.SortDir)
 	}
 
-	if options.GetOffset() != nil && options.GetLimit() != nil {
-		query += fmt.Sprintf("LIMIT %d, %d", options.GetOffsetValue(), options.GetLimitValue())
+	if options.Offset != nil && options.Limit != nil {
+		query += fmt.Sprintf("LIMIT %d, %d", options.Offset, options.Limit)
 	}
 
 	rows, err := r.db.Query(query, bindings...)
@@ -146,7 +148,11 @@ WHERE 1 = 1 `
 }
 
 func (r *userRepository) FindOneByUsername(ctx *context.RequestContext, username string) (*model.User, *apperror.AppError) {
-	res, err := r.Find(ctx, utils.NewUserFindFilters().WithUsername(username), utils.NewUserFindOptions().WithLimit(0, 1))
+	res, err := r.Find(
+		ctx,
+		utils.NewUserFindFiltersBuilder().WithUsernameValue(username).Build(),
+		utils.NewUserFindOptionsBuilder(r.appConfig.DefaultLimit).WithLimitValue(0, 1).Build(),
+	)
 
 	if err != nil {
 		return nil, apperror.NewDbAppError(ctx, err, UserRepositorySourceName)
@@ -211,9 +217,10 @@ func (r *userRepository) Delete(ctx *context.RequestContext, user *model.User) *
 
 // Static functions
 
-func NewUserRepository(db *sql.DB, logger *zerolog.Logger) UserRepository {
+func NewUserRepository(appConfig config.AppConfig, db *sql.DB, logger *zerolog.Logger) UserRepository {
 	return &userRepository{
-		db:     db,
-		logger: logger,
+		appConfig: appConfig,
+		db:        db,
+		logger:    logger,
 	}
 }

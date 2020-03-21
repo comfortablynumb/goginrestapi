@@ -8,13 +8,15 @@ import (
 
 // Structs
 
+// UserFindResource
+
 type UserFindResource struct {
+	CommonFindResource
+
 	Username *string `form:"username" validate:"omitempty,min=1,max=50"`
-	SortBy   *string `form:"sort_by"`
-	SortDir  *string `form:"sort_dir"`
-	Offset   *int    `form:"offset"`
-	Limit    *int    `form:"limit"`
 }
+
+// UserCreateResource
 
 type UserCreateResource struct {
 	Username     string `json:"username" binding:"required" validate:"required,min=1,max=50"`
@@ -22,15 +24,21 @@ type UserCreateResource struct {
 	Disabled     bool   `json:"disabled"`
 }
 
+// UserUpdateResource
+
 type UserUpdateResource struct {
-	Username     string `uri:"username" binding:"required" validate:"required,min=1,max=50"`
+	Username     string `uri:"username" json:"-" binding:"required" validate:"required,min=1,max=50"`
 	UserTypeName string `json:"user_type_name" validate:"required,user_type"`
 	Disabled     bool   `json:"disabled"`
 }
 
+// UserDeleteResource
+
 type UserDeleteResource struct {
-	Username string `uri:"username" binding:"required" validate:"required,min=1,max=50"`
+	Username string `uri:"username" json:"-" binding:"required" validate:"required,min=1,max=50"`
 }
+
+// UserResource
 
 type UserResource struct {
 	Username  string           `json:"username"`
@@ -39,6 +47,8 @@ type UserResource struct {
 	CreatedAt time.Time        `json:"created_at"`
 	UpdatedAt time.Time        `json:"updated_at"`
 }
+
+// UserResourceBuilder
 
 type UserResourceBuilder struct {
 	username  string
