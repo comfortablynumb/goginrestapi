@@ -28,6 +28,7 @@ type UserTypeService interface {
 	Update(ctx *context.RequestContext, userUpdateResource *resource.UserTypeUpdateResource) (*resource.UserTypeResource, *apperror.AppError)
 	Delete(ctx *context.RequestContext, userDeleteResource *resource.UserTypeDeleteResource) (*resource.UserTypeResource, *apperror.AppError)
 	ValidateUserTypeByName(ctx context2.Context, fl validator2.FieldLevel) bool
+	ValidateUserTypeUnique(ctx context2.Context, sl validator2.StructLevel)
 }
 
 // Structs
@@ -88,11 +89,7 @@ func (s *userTypeService) Create(ctx *context.RequestContext, userCreateResource
 }
 
 func (s *userTypeService) Update(ctx *context.RequestContext, userUpdateResource *resource.UserTypeUpdateResource) (*resource.UserTypeResource, *apperror.AppError) {
-	if err := s.validator.StructCtx(ctx, userUpdateResource); err != nil {
-		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
-	}
-
-	userType, err := s.userTypeRepository.FindOneByName(ctx, userUpdateResource.Name)
+	userType, err := s.userTypeRepository.FindOneByName(ctx, userUpdateResource.OriginalName)
 
 	if err != nil {
 		return nil, err
@@ -100,6 +97,12 @@ func (s *userTypeService) Update(ctx *context.RequestContext, userUpdateResource
 
 	if userType == nil {
 		return nil, apperror.NewModelNotFoundAppError(ctx, err, UserTypeServiceSourceName)
+	}
+
+	userUpdateResource.ID = userType.ID
+
+	if err := s.validator.StructCtx(ctx, userUpdateResource); err != nil {
+		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
 	userType.Name = userUpdateResource.Name
@@ -157,6 +160,29 @@ func (s *userTypeService) ValidateUserTypeByName(ctx context2.Context, fl valida
 	requestCtx.Set("user_type", userType)
 
 	return true
+}
+
+func (s *userTypeService) ValidateUserTypeUnique(ctx context2.Context, sl validator2.StructLevel) {
+	requestCtx := ctx.(*context.RequestContext)
+	userType := sl.Current().Interface().(resource.UserTypeUniqueValidator)
+
+	if len(userType.GetName()) > 0 {
+		currentUserType, err := s.userTypeRepository.FindOneByName(requestCtx, userType.GetName())
+
+		if err != nil {
+			s.logger.Err(err)
+
+			sl.ReportError(userType.GetName(), "Name", "Name", "unique", "")
+
+			return
+		}
+
+		if currentUserType != nil && currentUserType.ID != userType.GetID() {
+			sl.ReportError(userType.GetName(), "Name", "Name", "unique", "")
+
+			return
+		}
+	}
 }
 
 // Static functions

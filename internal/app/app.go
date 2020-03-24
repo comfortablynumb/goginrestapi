@@ -47,7 +47,11 @@ const (
 // Interfaces
 
 type App interface {
+	GetRouter() *gin.Engine
+	SetUp()
 	Run() error
+	ExecuteDbMigrationsUp()
+	ExecuteDbMigrationsDown()
 }
 
 // Structs
@@ -63,8 +67,12 @@ type app struct {
 	moduleManager     *module.ModuleManager
 }
 
+func (a *app) GetRouter() *gin.Engine {
+	return a.router
+}
+
 func (a *app) Run() error {
-	a.setUp()
+	a.SetUp()
 
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", a.config.Port),
@@ -97,7 +105,7 @@ func (a *app) Run() error {
 	return nil
 }
 
-func (a *app) setUp() {
+func (a *app) SetUp() {
 	a.logger = a.createLogger()
 	a.translator = a.createTranslator()
 	a.errorHandler = a.createErrorHandler()
@@ -107,7 +115,7 @@ func (a *app) setUp() {
 
 	a.setUpValidator(a.componentRegistry.Validator)
 
-	a.executeDbMigrations(a.componentRegistry.Db)
+	a.ExecuteDbMigrationsUp()
 }
 
 func (a *app) createLogger() *zerolog.Logger {
@@ -164,7 +172,7 @@ func (a *app) setUpValidator(validator *validator.Validate) {
 	}
 }
 
-func (a *app) executeDbMigrations(db *sql.DB) {
+func (a *app) createDbMigrationsInstance(db *sql.DB) *migrate.Migrate {
 	a.logger.Debug().Msg("[app] Creating database migrations driver.")
 
 	driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
@@ -181,13 +189,31 @@ func (a *app) executeDbMigrations(db *sql.DB) {
 
 	a.errorHandler.HandleFatalIfError(err, "Could NOT create database migrations instance.")
 
-	a.logger.Debug().Msg("[app] Executing database migrations.")
+	return databaseMigrations
+}
 
-	err = databaseMigrations.Up()
+func (a *app) ExecuteDbMigrationsUp() {
+	a.logger.Debug().Msg("[app] Executing database migrations UP.")
 
-	a.errorHandler.HandleFatalIfError(err, "There was an error while trying to execute the database migrations.")
+	err := a.componentRegistry.Migrations.Up()
 
-	a.logger.Debug().Msg("[app] Database migrations executed SUCCESSFULLY!")
+	if err != nil && err != migrate.ErrNoChange {
+		a.errorHandler.HandleFatalIfError(err, "There was an error while trying to execute the database migrations.")
+	}
+
+	a.logger.Debug().Msg("[app] Database migrations UP executed SUCCESSFULLY!")
+}
+
+func (a *app) ExecuteDbMigrationsDown() {
+	a.logger.Debug().Msg("[app] Executing database migrations DOWN.")
+
+	err := a.componentRegistry.Migrations.Down()
+
+	if err != nil && err != migrate.ErrNoChange {
+		a.errorHandler.HandleFatalIfError(err, "There was an error while trying to execute the database migrations.")
+	}
+
+	a.logger.Debug().Msg("[app] Database migrations DOWN executed SUCCESSFULLY!")
 }
 
 func (a *app) createErrorHandler() *errorhandler.ErrorHandler {
@@ -239,6 +265,10 @@ func (a *app) createComponentRegistry() *componentregistry.ComponentRegistry {
 	// Db
 
 	componentRegistry.Db = a.createDb()
+
+	// Migrations
+
+	componentRegistry.Migrations = a.createDbMigrationsInstance(componentRegistry.Db)
 
 	// Register modules components
 

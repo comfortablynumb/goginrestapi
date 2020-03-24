@@ -8,9 +8,12 @@ require (
 	github.com/go-playground/locales v0.12.1
 	github.com/go-playground/universal-translator v0.16.0
 	github.com/golang-migrate/migrate/v4 v4.9.1
+	github.com/json-iterator/go v1.1.7
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/rs/zerolog v1.18.0
+	github.com/stretchr/testify v1.4.0
 	github.com/swaggo/files v0.0.0-20190704085106-630677cd5c14
 	github.com/swaggo/gin-swagger v1.2.0
 	github.com/swaggo/swag v1.6.5

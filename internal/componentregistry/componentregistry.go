@@ -8,6 +8,7 @@ import (
 	"github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/comfortablynumb/goginrestapi/internal/service"
 	ut "github.com/go-playground/universal-translator"
+	"github.com/golang-migrate/migrate/v4"
 	"github.com/rs/zerolog"
 	"gopkg.in/go-playground/validator.v9"
 )
@@ -16,6 +17,7 @@ import (
 
 type ComponentRegistry struct {
 	Db                    *sql.DB
+	Migrations            *migrate.Migrate
 	Validator             *validator.Validate
 	Logger                *zerolog.Logger
 	Translator            *ut.UniversalTranslator

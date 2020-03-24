@@ -6,6 +6,7 @@ import (
 	"github.com/comfortablynumb/goginrestapi/internal/controller"
 	"github.com/comfortablynumb/goginrestapi/internal/errorhandler"
 	"github.com/comfortablynumb/goginrestapi/internal/repository"
+	"github.com/comfortablynumb/goginrestapi/internal/resource"
 	"github.com/comfortablynumb/goginrestapi/internal/service"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/go-playground/validator.v9"
@@ -67,4 +68,6 @@ func (m *UserTypeModule) SetUpValidator(errorHandler *errorhandler.ErrorHandler,
 		validator.RegisterValidationCtx("user_type", userTypeService.ValidateUserTypeByName),
 		"Could NOT register user type validation.",
 	)
+
+	validator.RegisterStructValidationCtx(userTypeService.ValidateUserTypeUnique, resource.UserTypeCreateResource{}, resource.UserTypeUpdateResource{})
 }

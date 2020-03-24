@@ -6,7 +6,16 @@ import (
 	"github.com/comfortablynumb/goginrestapi/internal/model"
 )
 
+// Interfaces
+
+type UserTypeUniqueValidator interface {
+	GetID() int64
+	GetName() string
+}
+
 // Structs
+
+// UserTypeFindResource
 
 type UserTypeFindResource struct {
 	CommonFindResource
@@ -14,19 +23,46 @@ type UserTypeFindResource struct {
 	Name *string `form:"name" validate:"omitempty,min=1,max=50"`
 }
 
+// UserTypeCreateResource
+
 type UserTypeCreateResource struct {
+	ID       int64  `json:"-"`
 	Name     string `json:"name" binding:"required" validate:"required,min=1,max=50"`
 	Disabled bool   `json:"disabled"`
 }
 
-type UserTypeUpdateResource struct {
-	Name     string `uri:"name" json:"-" binding:"required" validate:"required,min=1,max=50"`
-	Disabled bool   `json:"disabled"`
+func (u UserTypeCreateResource) GetID() int64 {
+	return u.ID
 }
+
+func (u UserTypeCreateResource) GetName() string {
+	return u.Name
+}
+
+// UserTypeUpdateResource
+
+type UserTypeUpdateResource struct {
+	ID           int64  `json:"-"`
+	OriginalName string `uri:"name" json:"-" binding:"required" validate:"required,min=1,max=50"`
+	Name         string `json:"name" validate:"required,min=1,max=50"`
+	Disabled     bool   `json:"disabled"`
+}
+
+func (u UserTypeUpdateResource) GetID() int64 {
+	return u.ID
+}
+
+func (u UserTypeUpdateResource) GetName() string {
+	return u.Name
+}
+
+// UserTypeDeleteResource
 
 type UserTypeDeleteResource struct {
 	Name string `uri:"name" json:"-" binding:"required" validate:"required,min=1,max=50"`
 }
+
+// UserTypeResource
 
 type UserTypeResource struct {
 	Name      string    `json:"name"`
@@ -34,6 +70,8 @@ type UserTypeResource struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
+
+// UserTypeResourceBuilder
 
 type UserTypeResourceBuilder struct {
 	name      string

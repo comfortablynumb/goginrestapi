@@ -114,6 +114,10 @@ WHERE 1 = 1 `
 }
 
 func (r *userTypeRepository) FindOneByName(ctx *context.RequestContext, name string) (*model.UserType, *apperror.AppError) {
+	if name == "" {
+		return nil, nil
+	}
+
 	res, err := r.Find(
 		ctx,
 		utils.NewUserTypeFindFiltersBuilder().WithNameValue(name).Build(),
