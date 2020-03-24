@@ -174,6 +174,42 @@ func TestUserTypeUpdateOk(t *testing.T) {
 	assert.Equal(t, req.Disabled, res.Disabled)
 }
 
+// DELETE TESTS
+
+func TestUserTypeDeleteAnUnexistentEntityDoesNotFailToAllowIdempotence(t *testing.T) {
+	mockApp := mock.NewMockAppWithDefaultConfig()
+
+	defer func() {
+		mockApp.App.ExecuteDbMigrationsDown()
+	}()
+
+	res := &resource.UserTypeResource{}
+
+	response, err := mockApp.NewDeleteRequest("/user_type/i-dont-exist", mock.NewMockAppOptions().WithExpectedResponse(res))
+
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, response.Code)
+	assert.Equal(t, "", res.Name)
+}
+
+func TestUserTypeDeleteExistentEnttiy(t *testing.T) {
+	mockApp := mock.NewMockAppWithDefaultConfig()
+
+	defer func() {
+		mockApp.App.ExecuteDbMigrationsDown()
+	}()
+
+	userTypeReq := CreateUserType(t, mockApp, "test-user-type-1")
+
+	res := &resource.UserTypeResource{}
+
+	response, err := mockApp.NewDeleteRequest("/user_type/"+userTypeReq.Name, mock.NewMockAppOptions().WithExpectedResponse(res))
+
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, response.Code)
+	assert.Equal(t, userTypeReq.Name, res.Name)
+}
+
 // Helper methods
 
 func CreateUserType(t *testing.T, mockApp *mock.MockApp, name string) *resource.UserTypeCreateResource {
