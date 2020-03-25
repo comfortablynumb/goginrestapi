@@ -56,6 +56,7 @@ func (m *UserTypeModule) SetUpRouter(errorHandler *errorhandler.ErrorHandler, co
 	userTypes := router.Group("/user_type")
 
 	userTypes.GET("", userTypeController.Find)
+	userTypes.GET("/:name", userTypeController.FindOneByName)
 	userTypes.POST("", userTypeController.Create)
 	userTypes.PUT("/:name", userTypeController.Update)
 	userTypes.DELETE("/:name", userTypeController.Delete)

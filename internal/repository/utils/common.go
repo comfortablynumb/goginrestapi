@@ -7,4 +7,5 @@ type FindOptions struct {
 	SortDir *string
 	Offset  *int
 	Limit   *int
+	IsCount bool
 }

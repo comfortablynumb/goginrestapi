@@ -23,7 +23,9 @@ const (
 // Interfaces
 
 type UserTypeService interface {
-	Find(ctx *context.RequestContext, userTypeFindResource *resource.UserTypeFindResource) ([]*resource.UserTypeResource, *apperror.AppError)
+	Count(ctx *context.RequestContext, userTypeFindResource *resource.UserTypeFindResource) (int64, *apperror.AppError)
+	Find(ctx *context.RequestContext, userTypeFindResource *resource.UserTypeFindResource) (*resource.UserTypeResourceList, *apperror.AppError)
+	FindOneByName(ctx *context.RequestContext, name string) (*resource.UserTypeResource, *apperror.AppError)
 	Create(ctx *context.RequestContext, userCreateResource *resource.UserTypeCreateResource) (*resource.UserTypeResource, *apperror.AppError)
 	Update(ctx *context.RequestContext, userUpdateResource *resource.UserTypeUpdateResource) (*resource.UserTypeResource, *apperror.AppError)
 	Delete(ctx *context.RequestContext, userDeleteResource *resource.UserTypeDeleteResource) (*resource.UserTypeResource, *apperror.AppError)
@@ -41,9 +43,31 @@ type userTypeService struct {
 	userTypeRepository repository.UserTypeRepository
 }
 
-func (s *userTypeService) Find(ctx *context.RequestContext, userTypeFindResource *resource.UserTypeFindResource) ([]*resource.UserTypeResource, *apperror.AppError) {
+func (s *userTypeService) Count(ctx *context.RequestContext, userTypeFindResource *resource.UserTypeFindResource) (int64, *apperror.AppError) {
+	filters := utils.NewUserTypeFindFiltersBuilder().WithName(userTypeFindResource.Name).Build()
+	options := utils.NewUserTypeFindOptionsBuilder(s.appConfig.DefaultLimit).
+		WithSortBy(userTypeFindResource.SortBy, userTypeFindResource.SortDir).
+		WithLimit(userTypeFindResource.Offset, userTypeFindResource.Limit).
+		Build()
+
+	return s.userTypeRepository.Count(ctx, filters, options)
+}
+
+func (s *userTypeService) Find(ctx *context.RequestContext, userTypeFindResource *resource.UserTypeFindResource) (*resource.UserTypeResourceList, *apperror.AppError) {
 	if err := s.validator.StructCtx(ctx, userTypeFindResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
+	}
+
+	count, err := s.Count(ctx, userTypeFindResource)
+
+	if err != nil {
+		return nil, apperror.NewModelNotFoundAppError(ctx, err, UserTypeServiceSourceName)
+	}
+
+	result := make([]*resource.UserTypeResource, 0)
+
+	if count < 1 {
+		return resource.NewUserTypeResourceList(result, count), nil
 	}
 
 	filters := utils.NewUserTypeFindFiltersBuilder().WithName(userTypeFindResource.Name).Build()
@@ -58,13 +82,29 @@ func (s *userTypeService) Find(ctx *context.RequestContext, userTypeFindResource
 		return nil, apperror.NewModelNotFoundAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
-	result := make([]*resource.UserTypeResource, 0)
-
 	for _, row := range rows {
 		result = append(result, resource.FromUserType(*row))
 	}
 
-	return result, nil
+	return resource.NewUserTypeResourceList(result, count), nil
+}
+
+func (s *userTypeService) FindOneByName(ctx *context.RequestContext, name string) (*resource.UserTypeResource, *apperror.AppError) {
+	if err := s.validator.VarCtx(ctx, name, "required"); err != nil {
+		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
+	}
+
+	userType, err := s.userTypeRepository.FindOneByName(ctx, name)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if userType == nil {
+		return nil, apperror.NewModelNotFoundAppError(ctx, err, UserTypeServiceSourceName)
+	}
+
+	return resource.FromUserType(*userType), nil
 }
 
 func (s *userTypeService) Create(ctx *context.RequestContext, userCreateResource *resource.UserTypeCreateResource) (*resource.UserTypeResource, *apperror.AppError) {
@@ -118,12 +158,12 @@ func (s *userTypeService) Update(ctx *context.RequestContext, userUpdateResource
 	return resource.FromUserType(*userType), nil
 }
 
-func (s *userTypeService) Delete(ctx *context.RequestContext, userDeleteResource *resource.UserTypeDeleteResource) (*resource.UserTypeResource, *apperror.AppError) {
-	if err := s.validator.StructCtx(ctx, userDeleteResource); err != nil {
+func (s *userTypeService) Delete(ctx *context.RequestContext, userTypeDeleteResource *resource.UserTypeDeleteResource) (*resource.UserTypeResource, *apperror.AppError) {
+	if err := s.validator.StructCtx(ctx, userTypeDeleteResource); err != nil {
 		return nil, apperror.NewValidationAppError(ctx, err, UserTypeServiceSourceName)
 	}
 
-	userType, err := s.userTypeRepository.FindOneByName(ctx, userDeleteResource.Name)
+	userType, err := s.userTypeRepository.FindOneByName(ctx, userTypeDeleteResource.Name)
 
 	if err != nil {
 		return nil, err

@@ -62,6 +62,14 @@ type UserTypeDeleteResource struct {
 	Name string `uri:"name" json:"-" binding:"required" validate:"required,min=1,max=50"`
 }
 
+// UserTypeResourceList
+
+type UserTypeResourceList struct {
+	TotalCount int64               `json:"total_count"`
+	PageCount  int64               `json:"page_count"`
+	Data       []*UserTypeResource `json:"data"`
+}
+
 // UserTypeResource
 
 type UserTypeResource struct {
@@ -112,6 +120,14 @@ func (b *UserTypeResourceBuilder) Build() *UserTypeResource {
 
 func NewUserTypeResourceBuilder() *UserTypeResourceBuilder {
 	return &UserTypeResourceBuilder{}
+}
+
+func NewUserTypeResourceList(list []*UserTypeResource, totalCount int64) *UserTypeResourceList {
+	return &UserTypeResourceList{
+		TotalCount: totalCount,
+		PageCount:  int64(len(list)),
+		Data:       list,
+	}
 }
 
 func NewUserTypeResource(name string, disabled bool, createdAt time.Time, updatedAt time.Time) *UserTypeResource {

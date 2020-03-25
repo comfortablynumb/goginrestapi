@@ -32,7 +32,7 @@ type UserTypeController struct {
 // @Param sort_dir query string false "Direction to sort by. Allowed values: asc, desc. Default: asc"
 // @Param offset query int false "Starts results from this offset. Default: 0"
 // @Param limit query int false "Limits the amount of results to return. Default: 50"
-// @Success 200 {object} resource.UserTypeResource
+// @Success 200 {object} resource.UserTypeResourceList
 // @Failure 400 {object} apperror.HttpError
 // @Failure 500 {object} apperror.HttpError
 // @Tags user types
@@ -47,7 +47,7 @@ func (ctrl *UserTypeController) Find(c *gin.Context) {
 		return
 	}
 
-	userResources, err := ctrl.userTypeService.Find(requestContext, &req)
+	userResourceList, err := ctrl.userTypeService.Find(requestContext, &req)
 
 	if err != nil {
 		c.Error(err)
@@ -55,7 +55,31 @@ func (ctrl *UserTypeController) Find(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, userResources)
+	c.JSON(http.StatusOK, userResourceList)
+}
+
+// Find a user type by its name.
+// @Summary Find a user type by its name.
+// @Description Allows you to search a user type by its name
+// @Produce json
+// @Param name path string true "User Type Name"
+// @Success 200 {object} resource.UserTypeResource
+// @Failure 404 {object} apperror.HttpError
+// @Failure 400 {object} apperror.HttpError
+// @Failure 500 {object} apperror.HttpError
+// @Tags user types
+// @Router /user_type/{name} [get]
+func (ctrl *UserTypeController) FindOneByName(c *gin.Context) {
+	requestContext := ctrl.requestContextFactory.NewRequestContext(c)
+	userResourceList, err := ctrl.userTypeService.FindOneByName(requestContext, c.Param("name"))
+
+	if err != nil {
+		c.Error(err)
+
+		return
+	}
+
+	c.JSON(http.StatusOK, userResourceList)
 }
 
 // Create Create a new user type.
