@@ -2,7 +2,6 @@ package repository
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/comfortablynumb/goginrestapi/internal/apperror"
 	"github.com/comfortablynumb/goginrestapi/internal/config"
@@ -56,14 +55,6 @@ WHERE 1 = 1 `
 	if filters.GetUsername() != nil {
 		query += "AND u.username = ? "
 		bindings = append(bindings, filters.GetUsernameValue())
-	}
-
-	if options.SortBy != nil && options.SortDir != nil {
-		query += fmt.Sprintf("ORDER BY %s %s", *options.SortBy, *options.SortDir)
-	}
-
-	if options.Offset != nil && options.Limit != nil {
-		query += fmt.Sprintf("LIMIT %d, %d", options.Offset, options.Limit)
 	}
 
 	rows, err := r.db.Query(query, bindings...)
@@ -150,8 +141,8 @@ WHERE 1 = 1 `
 func (r *userRepository) FindOneByUsername(ctx *context.RequestContext, username string) (*model.User, *apperror.AppError) {
 	res, err := r.Find(
 		ctx,
-		utils.NewUserFindFiltersBuilder().WithUsernameValue(username).Build(),
-		utils.NewUserFindOptionsBuilder(r.appConfig.DefaultLimit).WithLimitValue(0, 1).Build(),
+		utils.NewUserFindFilters().WithUsernameValue(username),
+		utils.NewUserFindOptions().WithOffsetValue(0).WithLimitValue(1),
 	)
 
 	if err != nil {

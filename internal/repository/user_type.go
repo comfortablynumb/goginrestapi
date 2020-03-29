@@ -2,13 +2,13 @@ package repository
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/comfortablynumb/goginrestapi/internal/apperror"
 	"github.com/comfortablynumb/goginrestapi/internal/config"
 	"github.com/comfortablynumb/goginrestapi/internal/context"
 	"github.com/comfortablynumb/goginrestapi/internal/model"
 	"github.com/comfortablynumb/goginrestapi/internal/repository/utils"
+	"github.com/huandu/go-sqlbuilder"
 	"github.com/rs/zerolog"
 )
 
@@ -40,9 +40,9 @@ type userTypeRepository struct {
 func (r *userTypeRepository) Count(ctx *context.RequestContext, filters *utils.UserTypeFindFilters, options *utils.UserTypeFindOptions) (int64, *apperror.AppError) {
 	countOptions := *options
 
-	countOptions.IsCount = true
+	countOptions.WithCount(true)
 
-	query, bindings := r.createQuery(filters, &countOptions)
+	query, bindings := r.createSelectQuery(filters, &countOptions)
 
 	row := r.db.QueryRow(query, bindings...)
 	count := int64(0)
@@ -57,7 +57,7 @@ func (r *userTypeRepository) Count(ctx *context.RequestContext, filters *utils.U
 }
 
 func (r *userTypeRepository) Find(ctx *context.RequestContext, filters *utils.UserTypeFindFilters, options *utils.UserTypeFindOptions) ([]*model.UserType, *apperror.AppError) {
-	query, bindings := r.createQuery(filters, options)
+	query, bindings := r.createSelectQuery(filters, options)
 
 	rows, err := r.db.Query(query, bindings...)
 
@@ -119,8 +119,8 @@ func (r *userTypeRepository) FindOneByName(ctx *context.RequestContext, name str
 
 	res, err := r.Find(
 		ctx,
-		utils.NewUserTypeFindFiltersBuilder().WithNameValue(name).Build(),
-		utils.NewUserTypeFindOptionsBuilder(r.appConfig.DefaultLimit).WithLimitValue(0, 1).Build(),
+		utils.NewUserTypeFindFilters().WithNameValue(name),
+		utils.NewUserTypeFindOptions().WithOffsetValue(0).WithLimitValue(1),
 	)
 
 	if err != nil {
@@ -135,9 +135,15 @@ func (r *userTypeRepository) FindOneByName(ctx *context.RequestContext, name str
 }
 
 func (r *userTypeRepository) Create(ctx *context.RequestContext, userType *model.UserType) *apperror.AppError {
-	query := `INSERT INTO user_types (name, disabled, created_at, updated_at) VALUES (?, ?, ?, ?)`
+	qb := sqlbuilder.NewInsertBuilder()
 
-	res, err := r.db.Exec(query, userType.Name, userType.Disabled, userType.CreatedAt, userType.UpdatedAt)
+	qb.InsertInto("user_types").
+		Cols("name", "disabled", "created_at", "updated_at").
+		Values(userType.Name, userType.Disabled, userType.CreatedAt, userType.UpdatedAt)
+
+	query, bindings := qb.Build()
+
+	res, err := r.db.Exec(query, bindings...)
 
 	if err != nil {
 		return apperror.NewDbAppError(ctx, err, UserTypeRepositorySourceName)
@@ -155,13 +161,18 @@ func (r *userTypeRepository) Create(ctx *context.RequestContext, userType *model
 }
 
 func (r *userTypeRepository) Update(ctx *context.RequestContext, userType *model.UserType) *apperror.AppError {
-	query := `UPDATE user_types
-	SET name = ?,
-		disabled = ?,
-		updated_at = ?
-	WHERE id = ?`
+	qb := sqlbuilder.NewUpdateBuilder()
 
-	_, err := r.db.Exec(query, userType.Name, userType.Disabled, userType.UpdatedAt, userType.ID)
+	qb.Update("user_types").
+		Set(qb.Assign("name", userType.Name)).
+		Set(qb.Assign("disabled", userType.Disabled)).
+		Set(qb.Assign("created_at", userType.CreatedAt)).
+		Set(qb.Assign("updated_at", userType.UpdatedAt)).
+		Where(qb.Equal("id", userType.ID))
+
+	query, bindings := qb.Build()
+
+	_, err := r.db.Exec(query, bindings...)
 
 	if err != nil {
 		return apperror.NewDbAppError(ctx, err, UserTypeRepositorySourceName)
@@ -171,10 +182,14 @@ func (r *userTypeRepository) Update(ctx *context.RequestContext, userType *model
 }
 
 func (r *userTypeRepository) Delete(ctx *context.RequestContext, userType *model.UserType) *apperror.AppError {
-	query := `DELETE FROM user_types
-	WHERE id = ?`
+	qb := sqlbuilder.NewDeleteBuilder()
 
-	_, err := r.db.Exec(query, userType.ID)
+	qb.DeleteFrom("user_types").
+		Where(qb.Equal("id", userType.ID))
+
+	query, bindings := qb.Build()
+
+	_, err := r.db.Exec(query, bindings...)
 
 	if err != nil {
 		return apperror.NewDbAppError(ctx, err, UserTypeRepositorySourceName)
@@ -183,40 +198,44 @@ func (r *userTypeRepository) Delete(ctx *context.RequestContext, userType *model
 	return nil
 }
 
-func (r *userTypeRepository) createQuery(filters *utils.UserTypeFindFilters, options *utils.UserTypeFindOptions) (string, []interface{}) {
-	query := "SELECT "
+func (r *userTypeRepository) createSelectQuery(filters *utils.UserTypeFindFilters, options *utils.UserTypeFindOptions) (string, []interface{}) {
+	sb := sqlbuilder.NewSelectBuilder()
 
-	if options.IsCount {
-		query += "COUNT(u.id)"
+	if options.IsCount() {
+		sb.Select("COUNT(u.id)")
 	} else {
-		query += `u.id,
-		u.name,
-		u.disabled,
-		u.created_at,
-		u.updated_at`
+		sb.Select(
+			"u.id",
+			"u.name",
+			"u.disabled",
+			"u.created_at",
+			"u.updated_at",
+		)
 	}
 
-	query += `
-FROM user_types u
-WHERE 1 = 1 `
-	bindings := make([]interface{}, 0)
+	sb.From(sb.As("user_types", "u"))
 
 	if filters.GetName() != nil {
-		query += "AND u.name = ? "
-		bindings = append(bindings, filters.GetNameValue())
+		sb.Where(sb.Equal("u.name", filters.GetNameValue()))
 	}
 
-	if !options.IsCount {
-		if options.SortBy != nil && options.SortDir != nil {
-			query += fmt.Sprintf("ORDER BY %s %s ", *options.SortBy, *options.SortDir)
+	if !options.IsCount() {
+		if options.GetSortBy() != nil && options.GetSortDir() != nil {
+			sb.OrderBy(options.GetSortByValue())
+
+			if options.IsAsc() {
+				sb.Asc()
+			} else {
+				sb.Desc()
+			}
 		}
 
-		if options.Offset != nil && options.Limit != nil {
-			query += fmt.Sprintf("LIMIT %d, %d ", *options.Offset, *options.Limit)
+		if options.GetOffset() != nil && options.GetLimit() != nil {
+			sb.Offset(options.GetOffsetValue()).Limit(options.GetLimitValue())
 		}
 	}
 
-	return query, bindings
+	return sb.Build()
 }
 
 // Static functions

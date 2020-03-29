@@ -10,6 +10,7 @@ import (
 	"github.com/comfortablynumb/goginrestapi/internal/repository"
 	"github.com/comfortablynumb/goginrestapi/internal/repository/utils"
 	"github.com/comfortablynumb/goginrestapi/internal/resource"
+	"github.com/docker/docker/registry"
 	"github.com/rs/zerolog"
 	validator2 "gopkg.in/go-playground/validator.v9"
 )
@@ -44,11 +45,8 @@ type userTypeService struct {
 }
 
 func (s *userTypeService) Count(ctx *context.RequestContext, userTypeFindResource *resource.UserTypeFindResource) (int64, *apperror.AppError) {
-	filters := utils.NewUserTypeFindFiltersBuilder().WithName(userTypeFindResource.Name).Build()
-	options := utils.NewUserTypeFindOptionsBuilder(s.appConfig.DefaultLimit).
-		WithSortBy(userTypeFindResource.SortBy, userTypeFindResource.SortDir).
-		WithLimit(userTypeFindResource.Offset, userTypeFindResource.Limit).
-		Build()
+	filters := utils.NewUserTypeFindFilters().WithName(userTypeFindResource.Name)
+	options := utils.NewUserTypeFindOptions().WithCount(true)
 
 	return s.userTypeRepository.Count(ctx, filters, options)
 }
@@ -70,11 +68,20 @@ func (s *userTypeService) Find(ctx *context.RequestContext, userTypeFindResource
 		return resource.NewUserTypeResourceList(result, count), nil
 	}
 
-	filters := utils.NewUserTypeFindFiltersBuilder().WithName(userTypeFindResource.Name).Build()
-	options := utils.NewUserTypeFindOptionsBuilder(s.appConfig.DefaultLimit).
-		WithSortBy(userTypeFindResource.SortBy, userTypeFindResource.SortDir).
-		WithLimit(userTypeFindResource.Offset, userTypeFindResource.Limit).
-		Build()
+	filters := utils.NewUserTypeFindFilters().WithName(userTypeFindResource.Name)
+	options := utils.NewUserTypeFindOptions()
+
+	if userTypeFindResource.SortBy != nil && userTypeFindResource.SortDir != nil {
+		options.WithSortBy(userTypeFindResource.SortBy).
+			WithSortDir(userTypeFindResource.SortDir)
+	}
+
+	if userTypeFindResource.Offset != nil && userTypeFindResource.Limit != nil {
+		options.WithOffset(userTypeFindResource.Offset).
+			WithLimit(userTypeFindResource.Limit)
+	} else {
+		options.WithLimitValue(registry.DefaultSearchLimit)
+	}
 
 	rows, err := s.userTypeRepository.Find(ctx, filters, options)
 

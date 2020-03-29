@@ -1,11 +1,20 @@
 package utils
 
+// Constants
+
+const (
+	SortDirAsc  = "ASC"
+	SortDirDesc = "DESC"
+)
+
+// Structs
+
 // FindOptions
 
 type FindOptions struct {
-	SortBy  *string
-	SortDir *string
-	Offset  *int
-	Limit   *int
-	IsCount bool
+	sortBy  *string
+	sortDir *string
+	offset  *int
+	limit   *int
+	count   bool
 }

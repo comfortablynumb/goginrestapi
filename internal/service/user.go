@@ -8,6 +8,7 @@ import (
 	repository2 "github.com/comfortablynumb/goginrestapi/internal/repository"
 	"github.com/comfortablynumb/goginrestapi/internal/repository/utils"
 	"github.com/comfortablynumb/goginrestapi/internal/resource"
+	"github.com/docker/docker/registry"
 	"github.com/rs/zerolog"
 	validator2 "gopkg.in/go-playground/validator.v9"
 )
@@ -43,11 +44,20 @@ func (s *userService) Find(ctx *context.RequestContext, userFindResource *resour
 		return nil, apperror.NewValidationAppError(ctx, err, UserServiceSourceName)
 	}
 
-	filters := utils.NewUserFindFiltersBuilder().WithUsername(userFindResource.Username).Build()
-	options := utils.NewUserFindOptionsBuilder(s.appConfig.DefaultLimit).
-		WithSortBy(userFindResource.SortBy, userFindResource.SortDir).
-		WithLimit(userFindResource.Offset, userFindResource.Limit).
-		Build()
+	filters := utils.NewUserFindFilters().WithUsername(userFindResource.Username)
+	options := utils.NewUserFindOptions()
+
+	if userFindResource.SortBy != nil && userFindResource.SortDir != nil {
+		options.WithSortBy(userFindResource.SortBy).
+			WithSortDir(userFindResource.SortDir)
+	}
+
+	if userFindResource.Offset != nil && userFindResource.Limit != nil {
+		options.WithOffset(userFindResource.Offset).
+			WithLimit(userFindResource.Limit)
+	} else {
+		options.WithLimitValue(registry.DefaultSearchLimit)
+	}
 
 	rows, err := s.userRepository.Find(ctx, filters, options)
 
